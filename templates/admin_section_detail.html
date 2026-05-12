@@ -1,0 +1,460 @@
+{% extends "base.html" %}
+
+{% block title %}{{ section.title }}{% endblock %}
+
+{% block content %}
+
+<div
+    style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:24px;
+        flex-wrap:wrap;
+        margin-bottom:42px;
+    "
+>
+    <div>
+        <div
+            style="
+                display:inline-flex;
+                padding:8px 13px;
+                border-radius:999px;
+                background:rgba(245,158,11,0.12);
+                border:1px solid rgba(245,158,11,0.25);
+                color:#fcd34d;
+                font-weight:800;
+                margin-bottom:18px;
+            "
+        >
+            {{ section.project_title }}
+        </div>
+
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                gap:16px;
+                flex-wrap:wrap;
+                margin-bottom:14px;
+            "
+        >
+            <h1 style="font-size:56px; letter-spacing:-0.055em;">
+                {{ section.title }}
+            </h1>
+
+            <span class="status-pill status-{{ section.status }}">
+                {% if section.status == "open" %}
+                    Avoin
+                {% else %}
+                    Suljettu
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="muted" style="line-height:1.9; font-size:17px;">
+            {% if section.trade_category %}
+                <div>🏗️ {{ section.trade_category }}</div>
+            {% endif %}
+
+            {% if section.deadline %}
+                <div>⏳ Deadline: {{ section.deadline }}</div>
+            {% endif %}
+
+            <div>📅 Luotu: {{ section.created_at }}</div>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <a
+            href="{{ url_for('edit_section', section_id=section.id) }}"
+            class="btn"
+        >
+            Muokkaa
+        </a>
+
+        <a
+            href="{{ url_for('admin_project_detail', project_id=section.project_id) }}"
+            class="btn"
+        >
+            ← Projektiin
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-3" style="margin-bottom:42px;">
+    <div class="stat-card">
+        <h3>Status</h3>
+        <p style="font-size:34px;">
+            {% if section.status == "open" %}
+                Avoin
+            {% else %}
+                Suljettu
+            {% endif %}
+        </p>
+        <div class="muted" style="line-height:1.7;">
+            Urakkaosan näkyvyys
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <h3>Kategoria</h3>
+        <p style="font-size:28px;">
+            {{ section.trade_category or "-" }}
+        </p>
+        <div class="muted" style="line-height:1.7;">
+            Urakkatyyppi
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <h3>Deadline</h3>
+        <p style="font-size:28px;">
+            {{ section.deadline or "-" }}
+        </p>
+        <div class="muted" style="line-height:1.7;">
+            Tarjousajan päättyminen
+        </div>
+    </div>
+</div>
+
+{% if section.description %}
+    <div class="card" style="margin-bottom:42px;">
+        <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:18px;">
+            Urakkaosan kuvaus
+        </h2>
+
+        <p class="muted" style="line-height:1.9; white-space:pre-line;">
+            {{ section.description }}
+        </p>
+    </div>
+{% endif %}
+
+<div class="grid grid-2" style="margin-bottom:50px;">
+
+    <div class="card">
+        <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:12px;">
+            Lisää piirustus tai suunnitelma
+        </h2>
+
+        <p class="muted" style="line-height:1.8; margin-bottom:26px;">
+            Lisää urakkaosaan PDF-, kuva-, DWG-, Word- tai Excel-tiedostoja,
+            jotka urakoitsijat voivat ladata tarjousta varten.
+        </p>
+
+        <form
+            method="POST"
+            action="{{ url_for('upload_section_file', section_id=section.id) }}"
+            enctype="multipart/form-data"
+        >
+            <div class="form-group">
+                <label>Tiedosto *</label>
+
+                <input
+                    type="file"
+                    name="file"
+                    class="form-control"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Lisätieto</label>
+
+                <input
+                    type="text"
+                    name="note"
+                    class="form-control"
+                    placeholder="Esim. Arkkitehtipiirustus, revisio 1"
+                >
+            </div>
+
+            <button type="submit" class="btn">
+                Lisää tiedosto
+            </button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:12px;">
+            Piirustukset ja suunnitelmat
+        </h2>
+
+        <p class="muted" style="line-height:1.8; margin-bottom:26px;">
+            Kaikki tähän urakkaosaan lisätyt dokumentit.
+        </p>
+
+        {% if files %}
+            <div class="grid">
+                {% for file in files %}
+                    <div
+                        style="
+                            padding:22px;
+                            border-radius:22px;
+                            background:rgba(255,255,255,0.04);
+                            border:1px solid rgba(255,255,255,0.07);
+                        "
+                    >
+                        <div
+                            style="
+                                display:flex;
+                                justify-content:space-between;
+                                gap:18px;
+                                flex-wrap:wrap;
+                                align-items:flex-start;
+                            "
+                        >
+                            <div>
+                                <h3 style="font-size:22px; margin-bottom:10px;">
+                                    📎 {{ file.original_filename }}
+                                </h3>
+
+                                <div class="muted" style="line-height:1.8;">
+                                    <div>Tyyppi: {{ file.file_type }}</div>
+                                    <div>Lisännyt: {{ file.uploaded_by_name }}</div>
+                                    <div>{{ file.created_at }}</div>
+
+                                    {% if file.note %}
+                                        <div style="margin-top:8px;">
+                                            {{ file.note }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                <a
+                                    href="{{ url_for('download_section_file', file_id=file.id) }}"
+                                    class="btn btn-small"
+                                >
+                                    Lataa
+                                </a>
+
+                                <form
+                                    method="POST"
+                                    action="{{ url_for('delete_section_file', file_id=file.id) }}"
+                                    onsubmit="return confirm('Haluatko varmasti poistaa tämän tiedoston?');"
+                                >
+                                    <button type="submit" class="btn btn-small btn-danger">
+                                        Poista
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                Ei tiedostoja vielä.
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<div
+    style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:20px;
+        flex-wrap:wrap;
+        margin-bottom:28px;
+    "
+>
+    <div>
+        <h2 class="section-title" style="margin-bottom:8px;">
+            Saapuneet tarjoukset
+        </h2>
+
+        <p class="muted">
+            Tarkastele urakoitsijoiden tarjouksia, liitteitä ja statuksia.
+        </p>
+    </div>
+
+    <a href="{{ url_for('admin_bids') }}" class="btn btn-small">
+        Tarjousvertailuun
+    </a>
+</div>
+
+{% if bids %}
+    <div class="grid">
+        {% for bid in bids %}
+            <div class="card">
+                <div
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:flex-start;
+                        gap:24px;
+                        flex-wrap:wrap;
+                        margin-bottom:24px;
+                    "
+                >
+                    <div>
+                        <h3 style="font-size:30px; letter-spacing:-0.04em; margin-bottom:12px;">
+                            {{ bid.company_name }}
+                        </h3>
+
+                        <div class="muted" style="line-height:1.8;">
+                            <div>👤 {{ bid.contractor_name }}</div>
+                            <div>✉️ {{ bid.email }}</div>
+
+                            {% if bid.phone %}
+                                <div>📞 {{ bid.phone }}</div>
+                            {% endif %}
+
+                            <div>📅 {{ bid.created_at }}</div>
+                        </div>
+                    </div>
+
+                    <div
+                        style="
+                            padding:20px 24px;
+                            border-radius:24px;
+                            background:rgba(245,158,11,0.12);
+                            border:1px solid rgba(245,158,11,0.25);
+                            min-width:230px;
+                        "
+                    >
+                        <div class="muted-2" style="margin-bottom:8px; font-size:13px; text-transform:uppercase; letter-spacing:0.08em;">
+                            Tarjous
+                        </div>
+
+                        <div style="font-size:34px; font-weight:900; letter-spacing:-0.04em;">
+                            {{ bid.price }}
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        gap:18px;
+                        flex-wrap:wrap;
+                        padding:20px;
+                        border-radius:22px;
+                        background:rgba(255,255,255,0.04);
+                        border:1px solid rgba(255,255,255,0.07);
+                        margin-bottom:18px;
+                    "
+                >
+                    <div>
+                        <div class="muted-2" style="margin-bottom:8px; font-size:13px; text-transform:uppercase; letter-spacing:0.08em;">
+                            Tarjouksen status
+                        </div>
+
+                        <span class="status-pill status-{{ bid.status }}">
+                            {% if bid.status == "submitted" %}
+                                Uusi
+                            {% elif bid.status == "reviewing" %}
+                                Käsittelyssä
+                            {% elif bid.status == "accepted" %}
+                                Hyväksytty
+                            {% elif bid.status == "rejected" %}
+                                Hylätty
+                            {% else %}
+                                {{ bid.status }}
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <form
+                        method="POST"
+                        action="{{ url_for('update_bid_status', bid_id=bid.id) }}"
+                        style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;"
+                    >
+                        <select name="status" class="form-control" style="min-width:190px;">
+                            <option value="submitted" {% if bid.status == "submitted" %}selected{% endif %}>
+                                Uusi
+                            </option>
+
+                            <option value="reviewing" {% if bid.status == "reviewing" %}selected{% endif %}>
+                                Käsittelyssä
+                            </option>
+
+                            <option value="accepted" {% if bid.status == "accepted" %}selected{% endif %}>
+                                Hyväksytty
+                            </option>
+
+                            <option value="rejected" {% if bid.status == "rejected" %}selected{% endif %}>
+                                Hylätty
+                            </option>
+                        </select>
+
+                        <button type="submit" class="btn btn-small">
+                            Päivitä
+                        </button>
+                    </form>
+                </div>
+
+                {% if bid.message %}
+                    <div
+                        style="
+                            padding:24px;
+                            border-radius:22px;
+                            background:rgba(255,255,255,0.04);
+                            border:1px solid rgba(255,255,255,0.07);
+                            margin-bottom:18px;
+                        "
+                    >
+                        <div class="muted-2" style="margin-bottom:12px; font-size:13px; text-transform:uppercase; letter-spacing:0.08em;">
+                            Viesti
+                        </div>
+
+                        <div class="muted" style="line-height:1.9; white-space:pre-line;">
+                            {{ bid.message }}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if bid.attachment_stored_filename %}
+                    <a
+                        href="{{ url_for('download_bid_attachment', bid_id=bid.id) }}"
+                        class="btn btn-small"
+                    >
+                        Lataa tarjousliite: {{ bid.attachment_original_filename }}
+                    </a>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card">
+        <div class="empty-state">
+            <h2 style="margin-bottom:16px;">
+                Ei tarjouksia vielä
+            </h2>
+
+            <p class="muted">
+                Urakoitsijoiden tarjoukset näkyvät täällä.
+            </p>
+        </div>
+    </div>
+{% endif %}
+
+<div class="card danger-card" style="margin-top:50px;">
+    <h2 style="font-size:28px; margin-bottom:16px;">
+        Vaaravyöhyke
+    </h2>
+
+    <p class="muted" style="line-height:1.8; margin-bottom:24px;">
+        Urakkaosan poistaminen poistaa myös siihen kuuluvat tiedostot
+        ja tarjoukset. Tätä toimintoa ei voi perua.
+    </p>
+
+    <form
+        method="POST"
+        action="{{ url_for('delete_section', section_id=section.id) }}"
+        onsubmit="return confirm('Haluatko varmasti poistaa tämän urakkaosan? Tätä toimintoa ei voi perua.');"
+    >
+        <button type="submit" class="btn btn-danger">
+            Poista urakkaosa
+        </button>
+    </form>
+</div>
+
+{% endblock %}

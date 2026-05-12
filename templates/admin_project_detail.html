@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.title }}{% endblock %}
+
+{% block content %}
+
+<div
+    style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:24px;
+        flex-wrap:wrap;
+        margin-bottom:42px;
+    "
+>
+    <div>
+        <div
+            style="
+                display:inline-flex;
+                padding:8px 13px;
+                border-radius:999px;
+                background:rgba(245,158,11,0.12);
+                border:1px solid rgba(245,158,11,0.25);
+                color:#fcd34d;
+                font-weight:800;
+                margin-bottom:18px;
+            "
+        >
+            Projektin tiedot
+        </div>
+
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                gap:16px;
+                flex-wrap:wrap;
+                margin-bottom:14px;
+            "
+        >
+            <h1 style="font-size:56px; letter-spacing:-0.055em;">
+                {{ project.title }}
+            </h1>
+
+            <span class="status-pill status-{{ project.status }}">
+                {% if project.status == "open" %}
+                    Avoin
+                {% else %}
+                    Suljettu
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="muted" style="line-height:1.9; font-size:17px;">
+            {% if project.location %}
+                <div>📍 {{ project.location }}</div>
+            {% endif %}
+
+            {% if project.deadline %}
+                <div>⏳ Deadline: {{ project.deadline }}</div>
+            {% endif %}
+
+            <div>📅 Luotu: {{ project.created_at }}</div>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <a
+            href="{{ url_for('edit_project', project_id=project.id) }}"
+            class="btn"
+        >
+            Muokkaa projektia
+        </a>
+
+        <a
+            href="{{ url_for('new_section', project_id=project.id) }}"
+            class="btn"
+        >
+            + Lisää urakkaosa
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-3" style="margin-bottom:42px;">
+    <div class="stat-card">
+        <h3>Status</h3>
+        <p style="font-size:34px;">
+            {% if project.status == "open" %}
+                Avoin
+            {% else %}
+                Suljettu
+            {% endif %}
+        </p>
+        <div class="muted" style="line-height:1.7;">
+            Projektin tarjousnäkyvyys
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <h3>Sijainti</h3>
+        <p style="font-size:28px;">
+            {{ project.location or "-" }}
+        </p>
+        <div class="muted" style="line-height:1.7;">
+            Kohteen sijainti
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <h3>Deadline</h3>
+        <p style="font-size:28px;">
+            {{ project.deadline or "-" }}
+        </p>
+        <div class="muted" style="line-height:1.7;">
+            Tarjousajan päättyminen
+        </div>
+    </div>
+</div>
+
+{% if project.description %}
+    <div class="card" style="margin-bottom:42px;">
+        <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:18px;">
+            Projektin kuvaus
+        </h2>
+
+        <p class="muted" style="line-height:1.9; white-space:pre-line;">
+            {{ project.description }}
+        </p>
+    </div>
+{% endif %}
+
+<div
+    style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:20px;
+        flex-wrap:wrap;
+        margin-bottom:28px;
+    "
+>
+    <div>
+        <h2 class="section-title" style="margin-bottom:8px;">
+            Urakkaosat
+        </h2>
+
+        <p class="muted">
+            Lisää, muokkaa ja hallitse projektiin kuuluvia tarjousosia.
+        </p>
+    </div>
+
+    <a
+        href="{{ url_for('new_section', project_id=project.id) }}"
+        class="btn btn-small"
+    >
+        + Lisää urakkaosa
+    </a>
+</div>
+
+{% if sections %}
+    <div class="grid grid-2">
+        {% for section in sections %}
+            <div class="card section-card">
+                <div
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:flex-start;
+                        gap:18px;
+                        margin-bottom:20px;
+                        flex-wrap:wrap;
+                    "
+                >
+                    <div>
+                        <h3>{{ section.title }}</h3>
+
+                        <div class="section-meta">
+                            {% if section.trade_category %}
+                                <div>🏗️ {{ section.trade_category }}</div>
+                            {% endif %}
+
+                            {% if section.deadline %}
+                                <div>⏳ Deadline: {{ section.deadline }}</div>
+                            {% endif %}
+
+                            <div>📎 Tiedostoja: {{ section.file_count }}</div>
+                            <div>💰 Tarjouksia: {{ section.bid_count }}</div>
+                        </div>
+                    </div>
+
+                    <span class="status-pill status-{{ section.status }}">
+                        {% if section.status == "open" %}
+                            Avoin
+                        {% else %}
+                            Suljettu
+                        {% endif %}
+                    </span>
+                </div>
+
+                {% if section.description %}
+                    <p class="muted" style="line-height:1.8;">
+                        {{ section.description[:240] }}
+
+                        {% if section.description|length > 240 %}
+                            ...
+                        {% endif %}
+                    </p>
+                {% else %}
+                    <p class="muted" style="line-height:1.8;">
+                        Ei kuvausta.
+                    </p>
+                {% endif %}
+
+                <div class="section-actions">
+                    <a
+                        href="{{ url_for('admin_section_detail', section_id=section.id) }}"
+                        class="btn btn-small"
+                    >
+                        Avaa
+                    </a>
+
+                    <a
+                        href="{{ url_for('edit_section', section_id=section.id) }}"
+                        class="btn btn-small"
+                    >
+                        Muokkaa
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card">
+        <div class="empty-state">
+            <h2 style="margin-bottom:16px;">
+                Ei urakkaosia vielä
+            </h2>
+
+            <p class="muted" style="margin-bottom:24px;">
+                Lisää projektiin ensimmäinen urakkaosa.
+            </p>
+
+            <a
+                href="{{ url_for('new_section', project_id=project.id) }}"
+                class="btn"
+            >
+                + Lisää urakkaosa
+            </a>
+        </div>
+    </div>
+{% endif %}
+
+<div class="card danger-card" style="margin-top:50px;">
+    <h2 style="font-size:28px; margin-bottom:16px;">
+        Vaaravyöhyke
+    </h2>
+
+    <p class="muted" style="line-height:1.8; margin-bottom:24px;">
+        Projektin poistaminen poistaa myös siihen kuuluvat urakkaosat,
+        tiedostot ja tarjoukset. Tätä toimintoa ei voi perua.
+    </p>
+
+    <form
+        method="POST"
+        action="{{ url_for('delete_project', project_id=project.id) }}"
+        onsubmit="return confirm('Haluatko varmasti poistaa koko projektin? Tätä toimintoa ei voi perua.');"
+    >
+        <button type="submit" class="btn btn-danger">
+            Poista projekti
+        </button>
+    </form>
+</div>
+
+{% endblock %}

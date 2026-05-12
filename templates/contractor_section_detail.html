@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}{{ section.title }}{% endblock %}
+
+{% block content %}
+
+<div
+    style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:20px;
+        flex-wrap:wrap;
+        margin-bottom:40px;
+    "
+>
+    <div>
+        <div
+            style="
+                color:rgba(255,255,255,0.6);
+                margin-bottom:14px;
+                font-size:14px;
+                letter-spacing:1px;
+                text-transform:uppercase;
+            "
+        >
+            {{ section.project_title }}
+        </div>
+
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                gap:16px;
+                flex-wrap:wrap;
+                margin-bottom:18px;
+            "
+        >
+            <h1 style="font-size:52px;">
+                {{ section.title }}
+            </h1>
+
+            <span class="status-pill status-{{ section.status }}">
+                {{ section.status }}
+            </span>
+        </div>
+
+        <div
+            style="
+                color:rgba(255,255,255,0.72);
+                line-height:1.9;
+                font-size:17px;
+            "
+        >
+            {% if section.trade_category %}
+                <div>🏗️ {{ section.trade_category }}</div>
+            {% endif %}
+
+            {% if section.project_location %}
+                <div>📍 {{ section.project_location }}</div>
+            {% endif %}
+
+            {% if section.deadline %}
+                <div>⏳ Deadline: {{ section.deadline }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <a
+        href="{{ url_for('contractor_project_detail', project_id=section.project_id) }}"
+        class="btn"
+    >
+        ← Takaisin projektiin
+    </a>
+</div>
+
+{% if section.description %}
+    <div class="card" style="margin-bottom:40px;">
+        <h2 style="font-size:28px; margin-bottom:20px;">
+            Urakkaosan kuvaus
+        </h2>
+
+        <p
+            style="
+                color:rgba(255,255,255,0.76);
+                line-height:1.9;
+                white-space:pre-line;
+            "
+        >
+            {{ section.description }}
+        </p>
+    </div>
+{% endif %}
+
+<div class="card" style="margin-bottom:40px;">
+    <h2 style="font-size:30px; margin-bottom:24px;">
+        Piirustukset ja suunnitelmat
+    </h2>
+
+    {% if files %}
+        <div class="grid">
+            {% for file in files %}
+                <div
+                    style="
+                        padding:20px;
+                        border-radius:18px;
+                        background:rgba(255,255,255,0.04);
+                        border:1px solid rgba(255,255,255,0.06);
+                    "
+                >
+                    <div
+                        style="
+                            display:flex;
+                            justify-content:space-between;
+                            gap:16px;
+                            flex-wrap:wrap;
+                            align-items:flex-start;
+                        "
+                    >
+                        <div>
+                            <h3 style="margin-bottom:10px;">
+                                📎 {{ file.original_filename }}
+                            </h3>
+
+                            <div
+                                style="
+                                    color:rgba(255,255,255,0.65);
+                                    line-height:1.8;
+                                "
+                            >
+                                <div>Tyyppi: {{ file.file_type }}</div>
+                                <div>Lisätty: {{ file.created_at }}</div>
+
+                                {% if file.note %}
+                                    <div style="margin-top:8px;">
+                                        {{ file.note }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <a
+                            href="{{ url_for('download_section_file', file_id=file.id) }}"
+                            class="btn btn-small"
+                        >
+                            Lataa
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            Tähän urakkaosaan ei ole vielä lisätty piirustuksia tai suunnitelmia.
+        </div>
+    {% endif %}
+</div>
+
+<div class="grid grid-2">
+
+    <div class="card">
+        <h2 style="font-size:30px; margin-bottom:28px;">
+            {% if existing_bid %}
+                Päivitä tarjous
+            {% else %}
+                Jätä tarjous
+            {% endif %}
+        </h2>
+
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Tarjoushinta *</label>
+
+                <input
+                    type="text"
+                    name="price"
+                    class="form-control"
+                    placeholder="Esim. 48 500 € + alv"
+                    required
+                    value="{{ existing_bid.price if existing_bid else '' }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Lisätiedot</label>
+
+                <textarea
+                    name="message"
+                    class="form-control"
+                    placeholder="Voit lisätä tarjoukseen lisätietoja..."
+                >{{ existing_bid.message if existing_bid else '' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Tarjousliite</label>
+
+                <input
+                    type="file"
+                    name="attachment"
+                    class="form-control"
+                >
+
+                {% if existing_bid and existing_bid.attachment_stored_filename %}
+                    <div
+                        style="
+                            margin-top:14px;
+                            color:rgba(255,255,255,0.7);
+                            line-height:1.7;
+                        "
+                    >
+                        Nykyinen liite:
+                        <a
+                            href="{{ url_for('download_bid_attachment', bid_id=existing_bid.id) }}"
+                            style="color:#f59e0b; font-weight:bold;"
+                        >
+                            {{ existing_bid.attachment_original_filename }}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn">
+                {% if existing_bid %}
+                    Päivitä tarjous
+                {% else %}
+                    Lähetä tarjous
+                {% endif %}
+            </button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h2 style="font-size:30px; margin-bottom:24px;">
+            Tarjousohjeet
+        </h2>
+
+        <div
+            style="
+                color:rgba(255,255,255,0.74);
+                line-height:2;
+            "
+        >
+            <div>• Tarkista urakkaosan tiedot huolellisesti</div>
+            <div>• Lataa ja tarkista kaikki piirustukset</div>
+            <div>• Varmista tarjoushinnan oikeellisuus</div>
+            <div>• Voit lisätä tarjouksen PDF-liitteen</div>
+            <div>• Tarjousta voi päivittää myöhemmin</div>
+
+            {% if section.deadline %}
+                <div
+                    style="
+                        margin-top:24px;
+                        padding:18px;
+                        border-radius:18px;
+                        background:rgba(245,158,11,0.12);
+                        border:1px solid rgba(245,158,11,0.25);
+                    "
+                >
+                    <div
+                        style="
+                            color:rgba(255,255,255,0.6);
+                            margin-bottom:8px;
+                            font-size:14px;
+                        "
+                    >
+                        Tarjousdeadline
+                    </div>
+
+                    <div style="font-size:26px; font-weight:bold;">
+                        {{ section.deadline }}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Urakoitsijarekisteröinti{% endblock %}
+
+{% block content %}
+
+<div class="form-wrap">
+
+    <div class="card">
+
+        <h1 style="font-size:42px; margin-bottom:14px;">
+            Urakoitsijarekisteröinti
+        </h1>
+
+        <p style="color:rgba(255,255,255,0.72); margin-bottom:34px; line-height:1.7;">
+            Rekisteröidy Sakela Urakkaportaaliin urakoitsijaksi.
+            Työnjohto tarkistaa ja hyväksyy uudet käyttäjät ennen
+            portaalin käyttöönottoa.
+        </p>
+
+        <form method="POST">
+
+            <div class="form-group">
+                <label>Yhteyshenkilön nimi *</label>
+
+                <input
+                    type="text"
+                    name="name"
+                    class="form-control"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Yrityksen nimi *</label>
+
+                <input
+                    type="text"
+                    name="company_name"
+                    class="form-control"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Sähköposti *</label>
+
+                <input
+                    type="email"
+                    name="email"
+                    class="form-control"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Puhelinnumero</label>
+
+                <input
+                    type="text"
+                    name="phone"
+                    class="form-control"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Salasana *</label>
+
+                <input
+                    type="password"
+                    name="password"
+                    class="form-control"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn">
+                Lähetä rekisteröityminen
+            </button>
+
+        </form>
+
+        <div style="margin-top:28px; color:rgba(255,255,255,0.7);">
+            Onko sinulla jo tunnukset?
+
+            <a
+                href="{{ url_for('login') }}"
+                style="color:#f59e0b; font-weight:bold;"
+            >
+                Kirjaudu sisään
+            </a>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

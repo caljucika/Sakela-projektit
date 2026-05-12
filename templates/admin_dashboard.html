@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Hallintapaneeli{% endblock %}
+
+{% block content %}
+
+<div
+    style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:24px;
+        flex-wrap:wrap;
+        margin-bottom:42px;
+    "
+>
+    <div>
+        <div
+            style="
+                display:inline-flex;
+                padding:8px 13px;
+                border-radius:999px;
+                background:rgba(245,158,11,0.12);
+                border:1px solid rgba(245,158,11,0.25);
+                color:#fcd34d;
+                font-weight:800;
+                margin-bottom:18px;
+            "
+        >
+            Työnjohdon hallinta
+        </div>
+
+        <h1 style="font-size:56px; letter-spacing:-0.055em; margin-bottom:14px;">
+            Hallintapaneeli
+        </h1>
+
+        <p class="muted" style="font-size:18px; line-height:1.8; max-width:820px;">
+            Hallitse projekteja, urakkaosia, piirustuksia,
+            urakoitsijoita ja tarjouksia yhdestä selkeästä näkymästä.
+        </p>
+    </div>
+
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <a href="{{ url_for('new_project') }}" class="btn">
+            + Lisää projekti
+        </a>
+
+        <a href="{{ url_for('admin_bids') }}" class="btn">
+            Tarjousvertailu
+        </a>
+    </div>
+</div>
+
+<div class="stats-grid">
+
+    <div class="stat-card">
+        <h3>Projektit</h3>
+        <p>{{ stats.projects }}</p>
+        <div class="muted" style="line-height:1.7;">
+            Luodut rakennusprojektit
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <h3>Urakkaosat</h3>
+        <p>{{ stats.sections }}</p>
+        <div class="muted" style="line-height:1.7;">
+            Projektien tarjousosat
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <h3>Tarjoukset</h3>
+        <p>{{ stats.bids }}</p>
+        <div class="muted" style="line-height:1.7;">
+            Saapuneet urakoitsijatarjoukset
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <h3>Odottaa hyväksyntää</h3>
+        <p>{{ stats.pending_contractors }}</p>
+        <div class="muted" style="line-height:1.7;">
+            Uudet urakoitsijahakemukset
+        </div>
+    </div>
+
+</div>
+
+<div
+    style="
+        display:grid;
+        grid-template-columns:1.15fr 0.85fr;
+        gap:24px;
+        align-items:start;
+    "
+>
+
+    <div class="card">
+
+        <div
+            style="
+                display:flex;
+                justify-content:space-between;
+                gap:18px;
+                align-items:center;
+                flex-wrap:wrap;
+                margin-bottom:26px;
+            "
+        >
+            <div>
+                <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:8px;">
+                    Viimeisimmät projektit
+                </h2>
+
+                <p class="muted">
+                    Nopea näkymä uusimpiin kohteisiin.
+                </p>
+            </div>
+
+            <a href="{{ url_for('admin_projects') }}" class="btn btn-small">
+                Kaikki projektit
+            </a>
+        </div>
+
+        {% if recent_projects %}
+            <div class="grid">
+                {% for project in recent_projects %}
+                    <div
+                        style="
+                            padding:22px;
+                            border-radius:22px;
+                            background:rgba(255,255,255,0.04);
+                            border:1px solid rgba(255,255,255,0.07);
+                        "
+                    >
+                        <div
+                            style="
+                                display:flex;
+                                justify-content:space-between;
+                                align-items:flex-start;
+                                gap:16px;
+                                flex-wrap:wrap;
+                                margin-bottom:16px;
+                            "
+                        >
+                            <div>
+                                <h3 style="font-size:24px; margin-bottom:10px;">
+                                    {{ project.title }}
+                                </h3>
+
+                                <div class="muted" style="line-height:1.8;">
+                                    {% if project.location %}
+                                        <div>📍 {{ project.location }}</div>
+                                    {% endif %}
+
+                                    {% if project.deadline %}
+                                        <div>⏳ Deadline: {{ project.deadline }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <span class="status-pill status-{{ project.status }}">
+                                {% if project.status == "open" %}
+                                    Avoin
+                                {% else %}
+                                    Suljettu
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <a
+                            href="{{ url_for('admin_project_detail', project_id=project.id) }}"
+                            class="btn btn-small"
+                        >
+                            Avaa projekti
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h2 style="margin-bottom:12px;">
+                    Ei projekteja vielä
+                </h2>
+
+                <p class="muted" style="margin-bottom:22px;">
+                    Luo ensimmäinen projekti aloittaaksesi.
+                </p>
+
+                <a href="{{ url_for('new_project') }}" class="btn">
+                    + Lisää projekti
+                </a>
+            </div>
+        {% endif %}
+
+    </div>
+
+    <div class="card">
+
+        <div
+            style="
+                display:flex;
+                justify-content:space-between;
+                gap:18px;
+                align-items:center;
+                flex-wrap:wrap;
+                margin-bottom:26px;
+            "
+        >
+            <div>
+                <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:8px;">
+                    Uudet urakoitsijat
+                </h2>
+
+                <p class="muted">
+                    Hyväksyntää odottavat hakemukset.
+                </p>
+            </div>
+
+            <a href="{{ url_for('admin_contractors') }}" class="btn btn-small">
+                Hallitse
+            </a>
+        </div>
+
+        {% if pending_contractors %}
+            <div class="grid">
+                {% for contractor in pending_contractors %}
+                    <div
+                        style="
+                            padding:22px;
+                            border-radius:22px;
+                            background:rgba(255,255,255,0.04);
+                            border:1px solid rgba(255,255,255,0.07);
+                        "
+                    >
+                        <h3 style="font-size:24px; margin-bottom:10px;">
+                            {{ contractor.company_name }}
+                        </h3>
+
+                        <div class="muted" style="line-height:1.8; margin-bottom:18px;">
+                            <div>👤 {{ contractor.name }}</div>
+                            <div>✉️ {{ contractor.email }}</div>
+
+                            {% if contractor.phone %}
+                                <div>📞 {{ contractor.phone }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                            <form
+                                method="POST"
+                                action="{{ url_for('approve_contractor', user_id=contractor.id) }}"
+                            >
+                                <button type="submit" class="btn btn-small">
+                                    Hyväksy
+                                </button>
+                            </form>
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('reject_contractor', user_id=contractor.id) }}"
+                            >
+                                <button type="submit" class="btn btn-small btn-danger">
+                                    Hylkää
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                Ei hyväksyntää odottavia urakoitsijoita.
+            </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

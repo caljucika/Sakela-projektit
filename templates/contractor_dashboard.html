@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Urakoitsijaportaali{% endblock %}
+
+{% block content %}
+
+<div
+    style="
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:24px;
+        flex-wrap:wrap;
+        margin-bottom:42px;
+    "
+>
+    <div>
+        <div
+            style="
+                display:inline-flex;
+                padding:8px 13px;
+                border-radius:999px;
+                background:rgba(245,158,11,0.12);
+                border:1px solid rgba(245,158,11,0.25);
+                color:#fcd34d;
+                font-weight:800;
+                margin-bottom:18px;
+            "
+        >
+            Urakoitsijaportaali
+        </div>
+
+        <h1 style="font-size:56px; letter-spacing:-0.055em; margin-bottom:14px;">
+            Tervetuloa portaaliin
+        </h1>
+
+        <p class="muted" style="font-size:18px; line-height:1.8; max-width:860px;">
+            Tarkastele avoimia rakennusprojekteja, lataa piirustuksia
+            ja jätä tarjouksia suoraan Sakela Urakkaportaalissa.
+        </p>
+    </div>
+
+    <a href="{{ url_for('contractor_projects') }}" class="btn">
+        Avoimet kohteet
+    </a>
+</div>
+
+<div class="stats-grid">
+
+    <div class="stat-card">
+        <h3>Avoimet projektit</h3>
+        <p>{{ projects|length }}</p>
+        <div class="muted" style="line-height:1.7;">
+            Tarjottavissa olevat kohteet
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <h3>Viimeisimmät tarjoukset</h3>
+        <p>{{ my_bids|length }}</p>
+        <div class="muted" style="line-height:1.7;">
+            Omat viimeisimmät tarjoukset
+        </div>
+    </div>
+
+</div>
+
+<div
+    style="
+        display:grid;
+        grid-template-columns:1.05fr 0.95fr;
+        gap:24px;
+        align-items:start;
+    "
+>
+
+    <div class="card">
+
+        <div
+            style="
+                display:flex;
+                justify-content:space-between;
+                gap:18px;
+                align-items:center;
+                flex-wrap:wrap;
+                margin-bottom:26px;
+            "
+        >
+            <div>
+                <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:8px;">
+                    Avoimet projektit
+                </h2>
+
+                <p class="muted">
+                    Kohteet, joihin voit tutustua ja jättää tarjouksia.
+                </p>
+            </div>
+
+            <a href="{{ url_for('contractor_projects') }}" class="btn btn-small">
+                Kaikki kohteet
+            </a>
+        </div>
+
+        {% if projects %}
+            <div class="grid">
+                {% for project in projects %}
+                    <div
+                        style="
+                            padding:22px;
+                            border-radius:22px;
+                            background:rgba(255,255,255,0.04);
+                            border:1px solid rgba(255,255,255,0.07);
+                        "
+                    >
+                        <div
+                            style="
+                                display:flex;
+                                justify-content:space-between;
+                                gap:18px;
+                                align-items:flex-start;
+                                flex-wrap:wrap;
+                                margin-bottom:16px;
+                            "
+                        >
+                            <div>
+                                <h3 style="font-size:24px; margin-bottom:10px;">
+                                    {{ project.title }}
+                                </h3>
+
+                                <div class="muted" style="line-height:1.8;">
+                                    {% if project.location %}
+                                        <div>📍 {{ project.location }}</div>
+                                    {% endif %}
+
+                                    {% if project.deadline %}
+                                        <div>⏳ Deadline: {{ project.deadline }}</div>
+                                    {% endif %}
+
+                                    <div>📦 Urakkaosia: {{ project.section_count }}</div>
+                                </div>
+                            </div>
+
+                            <span class="status-pill status-{{ project.status }}">
+                                {% if project.status == "open" %}
+                                    Avoin
+                                {% else %}
+                                    Suljettu
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <a
+                            href="{{ url_for('contractor_project_detail', project_id=project.id) }}"
+                            class="btn btn-small"
+                        >
+                            Avaa projekti
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                Ei avoimia projekteja tällä hetkellä.
+            </div>
+        {% endif %}
+
+    </div>
+
+    <div class="card">
+
+        <div
+            style="
+                display:flex;
+                justify-content:space-between;
+                gap:18px;
+                align-items:center;
+                flex-wrap:wrap;
+                margin-bottom:26px;
+            "
+        >
+            <div>
+                <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:8px;">
+                    Omat tarjoukset
+                </h2>
+
+                <p class="muted">
+                    Viimeisimmät jättämäsi tarjoukset ja niiden tila.
+                </p>
+            </div>
+        </div>
+
+        {% if my_bids %}
+            <div class="grid">
+                {% for bid in my_bids %}
+                    <div
+                        style="
+                            padding:22px;
+                            border-radius:22px;
+                            background:rgba(255,255,255,0.04);
+                            border:1px solid rgba(255,255,255,0.07);
+                        "
+                    >
+                        <div
+                            style="
+                                display:flex;
+                                justify-content:space-between;
+                                gap:16px;
+                                flex-wrap:wrap;
+                                align-items:flex-start;
+                                margin-bottom:16px;
+                            "
+                        >
+                            <div>
+                                <div
+                                    class="muted-2"
+                                    style="
+                                        margin-bottom:10px;
+                                        font-size:13px;
+                                        text-transform:uppercase;
+                                        letter-spacing:0.08em;
+                                    "
+                                >
+                                    {{ bid.project_title }}
+                                </div>
+
+                                <h3 style="font-size:23px; margin-bottom:12px;">
+                                    {{ bid.section_title }}
+                                </h3>
+                            </div>
+
+                            <span class="status-pill status-{{ bid.status }}">
+                                {% if bid.status == "submitted" %}
+                                    Uusi
+                                {% elif bid.status == "reviewing" %}
+                                    Käsittelyssä
+                                {% elif bid.status == "accepted" %}
+                                    Hyväksytty
+                                {% elif bid.status == "rejected" %}
+                                    Hylätty
+                                {% else %}
+                                    {{ bid.status }}
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div
+                            style="
+                                color:#f59e0b;
+                                font-size:30px;
+                                font-weight:900;
+                                letter-spacing:-0.04em;
+                                margin-bottom:14px;
+                            "
+                        >
+                            {{ bid.price }}
+                        </div>
+
+                        <div class="muted">
+                            {{ bid.created_at }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                Et ole vielä jättänyt tarjouksia.
+            </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

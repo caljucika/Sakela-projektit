@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if section %}
+        Muokkaa urakkaosaa
+    {% else %}
+        Uusi urakkaosa
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="form-wrap">
+
+    <div class="card">
+
+        <div style="margin-bottom:32px;">
+
+            <div
+                style="
+                    color:rgba(255,255,255,0.6);
+                    margin-bottom:14px;
+                    font-size:14px;
+                    letter-spacing:1px;
+                    text-transform:uppercase;
+                "
+            >
+                Projekti
+            </div>
+
+            <h1 style="font-size:46px; margin-bottom:12px;">
+                {{ project.title }}
+            </h1>
+
+            <p
+                style="
+                    color:rgba(255,255,255,0.72);
+                    line-height:1.8;
+                "
+            >
+                {% if section %}
+                    Päivitä urakkaosan tiedot, deadline tai status.
+                {% else %}
+                    Lisää projektiin uusi urakkaosa,
+                    johon urakoitsijat voivat jättää tarjouksia.
+                {% endif %}
+            </p>
+
+        </div>
+
+        <form method="POST">
+
+            <div class="form-group">
+                <label>Urakkaosan nimi *</label>
+
+                <input
+                    type="text"
+                    name="title"
+                    class="form-control"
+                    required
+                    placeholder="Esim. Sähköurakka"
+                    value="{{ section.title if section else '' }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Urakkakategoria</label>
+
+                <input
+                    type="text"
+                    name="trade_category"
+                    class="form-control"
+                    placeholder="Esim. Sähkötyöt"
+                    value="{{ section.trade_category if section else '' }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Deadline</label>
+
+                <input
+                    type="date"
+                    name="deadline"
+                    class="form-control"
+                    value="{{ section.deadline if section else '' }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Status</label>
+
+                <select name="status" class="form-control">
+                    <option
+                        value="open"
+                        {% if not section or section.status == "open" %}
+                            selected
+                        {% endif %}
+                    >
+                        Avoin
+                    </option>
+
+                    <option
+                        value="closed"
+                        {% if section and section.status == "closed" %}
+                            selected
+                        {% endif %}
+                    >
+                        Suljettu
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Kuvaus</label>
+
+                <textarea
+                    name="description"
+                    class="form-control"
+                    placeholder="Urakkaosan tarkempi kuvaus..."
+                >{{ section.description if section else '' }}</textarea>
+            </div>
+
+            <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;">
+
+                <button type="submit" class="btn">
+                    {% if section %}
+                        Tallenna muutokset
+                    {% else %}
+                        Lisää urakkaosa
+                    {% endif %}
+                </button>
+
+                {% if section %}
+                    <a
+                        href="{{ url_for('admin_section_detail', section_id=section.id) }}"
+                        class="btn btn-small"
+                    >
+                        Peruuta
+                    </a>
+                {% else %}
+                    <a
+                        href="{{ url_for('admin_project_detail', project_id=project.id) }}"
+                        class="btn btn-small"
+                    >
+                        Peruuta
+                    </a>
+                {% endif %}
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

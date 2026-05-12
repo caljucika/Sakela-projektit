@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if project %}
+        Muokkaa projektia
+    {% else %}
+        Uusi projekti
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="form-wrap">
+
+    <div class="card">
+
+        <h1 style="font-size:46px; margin-bottom:14px;">
+            {% if project %}
+                Muokkaa projektia
+            {% else %}
+                Lisää uusi projekti
+            {% endif %}
+        </h1>
+
+        <p
+            style="
+                color:rgba(255,255,255,0.72);
+                line-height:1.8;
+                margin-bottom:34px;
+            "
+        >
+            {% if project %}
+                Päivitä projektin tiedot, deadline tai status.
+            {% else %}
+                Luo uusi rakennusprojekti ja lisää siihen myöhemmin
+                urakkaosia, piirustuksia ja tarjouspyyntöjä.
+            {% endif %}
+        </p>
+
+        <form method="POST">
+
+            <div class="form-group">
+                <label>Projektin nimi *</label>
+
+                <input
+                    type="text"
+                    name="title"
+                    class="form-control"
+                    required
+                    value="{{ project.title if project else '' }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Sijainti</label>
+
+                <input
+                    type="text"
+                    name="location"
+                    class="form-control"
+                    placeholder="Esim. Oulu"
+                    value="{{ project.location if project else '' }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Deadline</label>
+
+                <input
+                    type="date"
+                    name="deadline"
+                    class="form-control"
+                    value="{{ project.deadline if project else '' }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Status</label>
+
+                <select name="status" class="form-control">
+                    <option
+                        value="open"
+                        {% if not project or project.status == "open" %}
+                            selected
+                        {% endif %}
+                    >
+                        Avoin
+                    </option>
+
+                    <option
+                        value="closed"
+                        {% if project and project.status == "closed" %}
+                            selected
+                        {% endif %}
+                    >
+                        Suljettu
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Kuvaus</label>
+
+                <textarea
+                    name="description"
+                    class="form-control"
+                    placeholder="Projektin tarkempi kuvaus..."
+                >{{ project.description if project else '' }}</textarea>
+            </div>
+
+            <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;">
+
+                <button type="submit" class="btn">
+                    {% if project %}
+                        Tallenna muutokset
+                    {% else %}
+                        Luo projekti
+                    {% endif %}
+                </button>
+
+                {% if project %}
+                    <a
+                        href="{{ url_for('admin_project_detail', project_id=project.id) }}"
+                        class="btn btn-small"
+                    >
+                        Peruuta
+                    </a>
+                {% else %}
+                    <a
+                        href="{{ url_for('admin_projects') }}"
+                        class="btn btn-small"
+                    >
+                        Peruuta
+                    </a>
+                {% endif %}
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Tili odottaa hyväksyntää{% endblock %}
+
+{% block content %}
+
+<div class="card" style="max-width:800px;">
+
+    <div
+        style="
+            width:80px;
+            height:80px;
+            border-radius:24px;
+            background:rgba(245,158,11,0.18);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:36px;
+            margin-bottom:28px;
+        "
+    >
+        ⏳
+    </div>
+
+    <h1 style="font-size:48px; margin-bottom:20px;">
+        Tili odottaa hyväksyntää
+    </h1>
+
+    <p
+        style="
+            color:rgba(255,255,255,0.75);
+            line-height:1.9;
+            font-size:18px;
+            margin-bottom:34px;
+        "
+    >
+        Rekisteröitymisesi on vastaanotettu onnistuneesti.
+        Sakelan työnjohto tarkistaa uudet urakoitsijat ennen
+        käyttöoikeuksien aktivointia.
+    </p>
+
+    <div
+        style="
+            background:rgba(255,255,255,0.05);
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:20px;
+            padding:24px;
+            margin-bottom:30px;
+        "
+    >
+        <h3 style="margin-bottom:14px;">
+            Mitä tapahtuu seuraavaksi?
+        </h3>
+
+        <ul
+            style="
+                color:rgba(255,255,255,0.72);
+                line-height:2;
+                padding-left:18px;
+            "
+        >
+            <li>Työnjohto tarkistaa yrityksesi tiedot</li>
+            <li>Käyttäjätili hyväksytään manuaalisesti</li>
+            <li>Saat pääsyn avoimiin urakkakohteisiin</li>
+            <li>Voit jättää tarjouksia suoraan portaalissa</li>
+        </ul>
+    </div>
+
+    <a href="{{ url_for('logout') }}" class="btn">
+        Kirjaudu ulos
+    </a>
+
+</div>
+
+{% endblock %}

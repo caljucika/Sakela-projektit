@@ -1,0 +1,1362 @@
+import os
+import sqlite3
+from datetime import datetime
+from functools import wraps
+
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session,
+    flash,
+    send_from_directory,
+)
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-later")
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DATABASE = os.path.join(BASE_DIR, "sakela_portal.db")
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+
+ALLOWED_EXTENSIONS = {
+    "pdf", "png", "jpg", "jpeg", "webp", "gif",
+    "dwg", "doc", "docx", "xls", "xlsx", "txt",
+}
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+def now_str():
+    return datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def parse_price_value(price_text):
+    if not price_text:
+        return 999999999999
+
+    cleaned = ""
+    for char in price_text:
+        if char.isdigit() or char in [",", "."]:
+            cleaned += char
+
+    cleaned = cleaned.replace(" ", "").replace(",", ".")
+
+    try:
+        return float(cleaned)
+    except ValueError:
+        return 999999999999
+
+def make_stored_filename(original_filename):
+    safe_name = secure_filename(original_filename)
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+    return f"{timestamp}_{safe_name}"
+
+
+def safe_remove_file(stored_filename):
+    if not stored_filename:
+        return
+
+    path = os.path.join(UPLOAD_FOLDER, stored_filename)
+
+    if os.path.exists(path):
+        os.remove(path)
+
+
+def get_db():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def column_exists(conn, table_name, column_name):
+    columns = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return any(column["name"] == column_name for column in columns)
+
+
+def init_db():
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'contractor',
+            contractor_status TEXT NOT NULL DEFAULT 'pending',
+            company_name TEXT,
+            phone TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            location TEXT,
+            description TEXT,
+            deadline TEXT,
+            status TEXT NOT NULL DEFAULT 'open',
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS project_sections (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            trade_category TEXT,
+            deadline TEXT,
+            status TEXT NOT NULL DEFAULT 'open',
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS section_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            section_id INTEGER NOT NULL,
+            uploaded_by INTEGER NOT NULL,
+            original_filename TEXT NOT NULL,
+            stored_filename TEXT NOT NULL,
+            file_type TEXT,
+            note TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (section_id) REFERENCES project_sections(id) ON DELETE CASCADE,
+            FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS bids (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            section_id INTEGER NOT NULL,
+            contractor_id INTEGER NOT NULL,
+            price TEXT,
+            message TEXT,
+            attachment_original_filename TEXT,
+            attachment_stored_filename TEXT,
+            status TEXT NOT NULL DEFAULT 'submitted',
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (section_id) REFERENCES project_sections(id) ON DELETE CASCADE,
+            FOREIGN KEY (contractor_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
+
+    if not column_exists(conn, "bids", "attachment_original_filename"):
+        cur.execute("ALTER TABLE bids ADD COLUMN attachment_original_filename TEXT")
+
+    if not column_exists(conn, "bids", "attachment_stored_filename"):
+        cur.execute("ALTER TABLE bids ADD COLUMN attachment_stored_filename TEXT")
+
+    conn.commit()
+
+    admin_email = "admin@sakela.fi"
+    existing_admin = cur.execute(
+        "SELECT id FROM users WHERE email = ?",
+        (admin_email,)
+    ).fetchone()
+
+    if not existing_admin:
+        cur.execute("""
+            INSERT INTO users (
+                name,
+                email,
+                password_hash,
+                role,
+                contractor_status,
+                company_name,
+                phone,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            "Sakela Admin",
+            admin_email,
+            generate_password_hash("admin123"),
+            "admin",
+            "approved",
+            "Sakela",
+            "",
+            now_str(),
+        ))
+
+        conn.commit()
+
+    conn.close()
+
+
+def current_user():
+    if "user_id" not in session:
+        return None
+
+    conn = get_db()
+    user = conn.execute(
+        "SELECT * FROM users WHERE id = ?",
+        (session["user_id"],)
+    ).fetchone()
+    conn.close()
+    return user
+
+
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            flash("Kirjaudu ensin sisään.", "warning")
+            return redirect(url_for("login"))
+        return view_func(*args, **kwargs)
+    return wrapper
+
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        user = current_user()
+        if not user or user["role"] != "admin":
+            flash("Sinulla ei ole oikeutta tähän näkymään.", "danger")
+            return redirect(url_for("index"))
+        return view_func(*args, **kwargs)
+    return wrapper
+
+
+def approved_contractor_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        user = current_user()
+        if not user:
+            flash("Kirjaudu ensin sisään.", "warning")
+            return redirect(url_for("login"))
+
+        if user["role"] == "admin":
+            return view_func(*args, **kwargs)
+
+        if user["role"] == "contractor" and user["contractor_status"] == "approved":
+            return view_func(*args, **kwargs)
+
+        flash("Tilisi odottaa vielä hyväksyntää.", "warning")
+        return redirect(url_for("pending"))
+    return wrapper
+
+
+@app.context_processor
+def inject_user():
+    return {"current_user": current_user()}
+
+
+@app.route("/")
+def index():
+    user = current_user()
+
+    if user:
+        if user["role"] == "admin":
+            return redirect(url_for("admin_dashboard"))
+
+        if user["contractor_status"] == "approved":
+            return redirect(url_for("contractor_dashboard"))
+
+        return redirect(url_for("pending"))
+
+    return render_template("index.html")
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        company_name = request.form.get("company_name", "").strip()
+        phone = request.form.get("phone", "").strip()
+
+        if not name or not email or not password or not company_name:
+            flash("Täytä kaikki pakolliset kentät.", "danger")
+            return redirect(url_for("register"))
+
+        conn = get_db()
+
+        existing = conn.execute(
+            "SELECT id FROM users WHERE email = ?",
+            (email,)
+        ).fetchone()
+
+        if existing:
+            conn.close()
+            flash("Tällä sähköpostilla on jo käyttäjä.", "danger")
+            return redirect(url_for("register"))
+
+        conn.execute("""
+            INSERT INTO users (
+                name, email, password_hash, role, contractor_status,
+                company_name, phone, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            name,
+            email,
+            generate_password_hash(password),
+            "contractor",
+            "pending",
+            company_name,
+            phone,
+            now_str(),
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash("Rekisteröityminen vastaanotettu. Tili odottaa hyväksyntää.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("register.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        conn = get_db()
+        user = conn.execute(
+            "SELECT * FROM users WHERE email = ?",
+            (email,)
+        ).fetchone()
+        conn.close()
+
+        if not user or not check_password_hash(user["password_hash"], password):
+            flash("Virheellinen sähköposti tai salasana.", "danger")
+            return redirect(url_for("login"))
+
+        session["user_id"] = user["id"]
+        flash("Kirjautuminen onnistui.", "success")
+
+        if user["role"] == "admin":
+            return redirect(url_for("admin_dashboard"))
+
+        if user["contractor_status"] == "approved":
+            return redirect(url_for("contractor_dashboard"))
+
+        return redirect(url_for("pending"))
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("Kirjauduit ulos.", "success")
+    return redirect(url_for("index"))
+
+
+@app.route("/pending")
+@login_required
+def pending():
+    user = current_user()
+
+    if user["role"] == "admin":
+        return redirect(url_for("admin_dashboard"))
+
+    if user["contractor_status"] == "approved":
+        return redirect(url_for("contractor_dashboard"))
+
+    return render_template("pending.html")
+
+
+@app.route("/files/<int:file_id>/download")
+@login_required
+@approved_contractor_required
+def download_section_file(file_id):
+    conn = get_db()
+
+    file_row = conn.execute("""
+        SELECT sf.*
+        FROM section_files sf
+        WHERE sf.id = ?
+    """, (file_id,)).fetchone()
+
+    conn.close()
+
+    if not file_row:
+        flash("Tiedostoa ei löytynyt.", "danger")
+        return redirect(url_for("index"))
+
+    return send_from_directory(
+        UPLOAD_FOLDER,
+        file_row["stored_filename"],
+        as_attachment=True,
+        download_name=file_row["original_filename"],
+    )
+
+
+@app.route("/bid-attachments/<int:bid_id>/download")
+@login_required
+def download_bid_attachment(bid_id):
+    user = current_user()
+    conn = get_db()
+
+    bid = conn.execute("""
+        SELECT b.*
+        FROM bids b
+        WHERE b.id = ?
+    """, (bid_id,)).fetchone()
+
+    conn.close()
+
+    if not bid or not bid["attachment_stored_filename"]:
+        flash("Tarjousliitettä ei löytynyt.", "danger")
+        return redirect(url_for("index"))
+
+    if user["role"] != "admin" and bid["contractor_id"] != user["id"]:
+        flash("Sinulla ei ole oikeutta tähän tiedostoon.", "danger")
+        return redirect(url_for("index"))
+
+    return send_from_directory(
+        UPLOAD_FOLDER,
+        bid["attachment_stored_filename"],
+        as_attachment=True,
+        download_name=bid["attachment_original_filename"],
+    )
+
+
+@app.route("/admin")
+@login_required
+@admin_required
+def admin_dashboard():
+    conn = get_db()
+
+    stats = {
+        "projects": conn.execute("SELECT COUNT(*) AS count FROM projects").fetchone()["count"],
+        "sections": conn.execute("SELECT COUNT(*) AS count FROM project_sections").fetchone()["count"],
+        "bids": conn.execute("SELECT COUNT(*) AS count FROM bids").fetchone()["count"],
+        "pending_contractors": conn.execute("""
+            SELECT COUNT(*) AS count
+            FROM users
+            WHERE role = 'contractor' AND contractor_status = 'pending'
+        """).fetchone()["count"],
+    }
+
+    recent_projects = conn.execute("""
+        SELECT *
+        FROM projects
+        ORDER BY created_at DESC
+        LIMIT 5
+    """).fetchall()
+
+    pending_contractors = conn.execute("""
+        SELECT *
+        FROM users
+        WHERE role = 'contractor' AND contractor_status = 'pending'
+        ORDER BY created_at DESC
+    """).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "admin_dashboard.html",
+        stats=stats,
+        recent_projects=recent_projects,
+        pending_contractors=pending_contractors,
+    )
+
+
+@app.route("/admin/contractors")
+@login_required
+@admin_required
+def admin_contractors():
+    conn = get_db()
+    contractors = conn.execute("""
+        SELECT *
+        FROM users
+        WHERE role = 'contractor'
+        ORDER BY created_at DESC
+    """).fetchall()
+    conn.close()
+
+    return render_template("admin_contractors.html", contractors=contractors)
+
+
+@app.route("/admin/contractors/<int:user_id>/approve", methods=["POST"])
+@login_required
+@admin_required
+def approve_contractor(user_id):
+    conn = get_db()
+    conn.execute("""
+        UPDATE users
+        SET contractor_status = 'approved'
+        WHERE id = ? AND role = 'contractor'
+    """, (user_id,))
+    conn.commit()
+    conn.close()
+
+    flash("Urakoitsija hyväksytty.", "success")
+    return redirect(url_for("admin_contractors"))
+
+
+@app.route("/admin/contractors/<int:user_id>/reject", methods=["POST"])
+@login_required
+@admin_required
+def reject_contractor(user_id):
+    conn = get_db()
+    conn.execute("""
+        UPDATE users
+        SET contractor_status = 'rejected'
+        WHERE id = ? AND role = 'contractor'
+    """, (user_id,))
+    conn.commit()
+    conn.close()
+
+    flash("Urakoitsija hylätty.", "success")
+    return redirect(url_for("admin_contractors"))
+
+
+@app.route("/admin/projects")
+@login_required
+@admin_required
+def admin_projects():
+    search = request.args.get("search", "").strip()
+
+    conn = get_db()
+
+    if search:
+        projects = conn.execute("""
+            SELECT
+                p.*,
+                COUNT(DISTINCT ps.id) AS section_count,
+                COUNT(DISTINCT b.id) AS bid_count
+                MAX(b.created_at) AS latest_bid_at
+            FROM projects p
+            LEFT JOIN project_sections ps ON ps.project_id = p.id
+            LEFT JOIN bids b ON b.section_id = ps.id
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+        """).fetchall()
+    else:
+        projects = conn.execute("""
+            SELECT
+                p.*,
+                COUNT(DISTINCT ps.id) AS section_count,
+                COUNT(DISTINCT b.id) AS bid_count
+                MAX(b.created_at) AS latest_bid_at
+                LEFT JOIN bids b ON b.section_id = ps.id
+            FROM projects p
+            LEFT JOIN project_sections ps ON ps.project_id = p.id
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+        """).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "admin_projects.html",
+        projects=projects,
+        search=search,
+    )
+
+@app.route("/admin/projects/new", methods=["GET", "POST"])
+@login_required
+@admin_required
+def new_project():
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        location = request.form.get("location", "").strip()
+        description = request.form.get("description", "").strip()
+        deadline = request.form.get("deadline", "").strip()
+        status = request.form.get("status", "open")
+
+        if not title:
+            flash("Projektin nimi on pakollinen.", "danger")
+            return redirect(url_for("new_project"))
+
+        conn = get_db()
+        conn.execute("""
+            INSERT INTO projects (
+                title, location, description, deadline, status, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (title, location, description, deadline, status, now_str()))
+        conn.commit()
+        conn.close()
+
+        flash("Projekti lisätty.", "success")
+        return redirect(url_for("admin_projects"))
+
+    return render_template("project_form.html", project=None)
+
+
+@app.route("/admin/projects/<int:project_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_project(project_id):
+    conn = get_db()
+
+    project = conn.execute(
+        "SELECT * FROM projects WHERE id = ?",
+        (project_id,)
+    ).fetchone()
+
+    if not project:
+        conn.close()
+        flash("Projektia ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        location = request.form.get("location", "").strip()
+        description = request.form.get("description", "").strip()
+        deadline = request.form.get("deadline", "").strip()
+        status = request.form.get("status", "open")
+
+        if not title:
+            conn.close()
+            flash("Projektin nimi on pakollinen.", "danger")
+            return redirect(url_for("edit_project", project_id=project_id))
+
+        conn.execute("""
+            UPDATE projects
+            SET title = ?, location = ?, description = ?, deadline = ?, status = ?
+            WHERE id = ?
+        """, (title, location, description, deadline, status, project_id))
+
+        conn.commit()
+        conn.close()
+
+        flash("Projektin tiedot päivitetty.", "success")
+        return redirect(url_for("admin_project_detail", project_id=project_id))
+
+    conn.close()
+    return render_template("project_form.html", project=project)
+
+
+@app.route("/admin/projects/<int:project_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_project(project_id):
+    conn = get_db()
+
+    files = conn.execute("""
+        SELECT sf.stored_filename
+        FROM section_files sf
+        JOIN project_sections ps ON ps.id = sf.section_id
+        WHERE ps.project_id = ?
+    """, (project_id,)).fetchall()
+
+    attachments = conn.execute("""
+        SELECT b.attachment_stored_filename
+        FROM bids b
+        JOIN project_sections ps ON ps.id = b.section_id
+        WHERE ps.project_id = ?
+    """, (project_id,)).fetchall()
+
+    for file_row in files:
+        safe_remove_file(file_row["stored_filename"])
+
+    for bid in attachments:
+        safe_remove_file(bid["attachment_stored_filename"])
+
+    conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+    conn.commit()
+    conn.close()
+
+    flash("Projekti poistettu.", "success")
+    return redirect(url_for("admin_projects"))
+
+
+@app.route("/admin/projects/<int:project_id>")
+@login_required
+@admin_required
+def admin_project_detail(project_id):
+    conn = get_db()
+
+    project = conn.execute(
+        "SELECT * FROM projects WHERE id = ?",
+        (project_id,)
+    ).fetchone()
+
+    if not project:
+        conn.close()
+        flash("Projektia ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    sections = conn.execute("""
+        SELECT
+            ps.*,
+            COUNT(DISTINCT b.id) AS bid_count,
+            COUNT(DISTINCT sf.id) AS file_count
+        FROM project_sections ps
+        LEFT JOIN bids b ON b.section_id = ps.id
+        LEFT JOIN section_files sf ON sf.section_id = ps.id
+        WHERE ps.project_id = ?
+        GROUP BY ps.id
+        ORDER BY ps.created_at DESC
+    """, (project_id,)).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "admin_project_detail.html",
+        project=project,
+        sections=sections,
+    )
+
+
+@app.route("/admin/projects/<int:project_id>/sections/new", methods=["GET", "POST"])
+@login_required
+@admin_required
+def new_section(project_id):
+    conn = get_db()
+
+    project = conn.execute(
+        "SELECT * FROM projects WHERE id = ?",
+        (project_id,)
+    ).fetchone()
+
+    if not project:
+        conn.close()
+        flash("Projektia ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        trade_category = request.form.get("trade_category", "").strip()
+        description = request.form.get("description", "").strip()
+        deadline = request.form.get("deadline", "").strip()
+        status = request.form.get("status", "open")
+
+        if not title:
+            conn.close()
+            flash("Urakkaosan nimi on pakollinen.", "danger")
+            return redirect(url_for("new_section", project_id=project_id))
+
+        conn.execute("""
+            INSERT INTO project_sections (
+                project_id, title, description, trade_category,
+                deadline, status, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            project_id,
+            title,
+            description,
+            trade_category,
+            deadline,
+            status,
+            now_str(),
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash("Urakkaosa lisätty.", "success")
+        return redirect(url_for("admin_project_detail", project_id=project_id))
+
+    conn.close()
+    return render_template("section_form.html", project=project, section=None)
+
+
+@app.route("/admin/sections/<int:section_id>/edit", methods=["GET", "POST"])
+@login_required
+@admin_required
+def edit_section(section_id):
+    conn = get_db()
+
+    section = conn.execute("""
+        SELECT
+            ps.*,
+            p.title AS project_title
+        FROM project_sections ps
+        JOIN projects p ON p.id = ps.project_id
+        WHERE ps.id = ?
+    """, (section_id,)).fetchone()
+
+    if not section:
+        conn.close()
+        flash("Urakkaosaa ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    project = conn.execute(
+        "SELECT * FROM projects WHERE id = ?",
+        (section["project_id"],)
+    ).fetchone()
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        trade_category = request.form.get("trade_category", "").strip()
+        description = request.form.get("description", "").strip()
+        deadline = request.form.get("deadline", "").strip()
+        status = request.form.get("status", "open")
+
+        if not title:
+            conn.close()
+            flash("Urakkaosan nimi on pakollinen.", "danger")
+            return redirect(url_for("edit_section", section_id=section_id))
+
+        conn.execute("""
+            UPDATE project_sections
+            SET title = ?, description = ?, trade_category = ?, deadline = ?, status = ?
+            WHERE id = ?
+        """, (
+            title,
+            description,
+            trade_category,
+            deadline,
+            status,
+            section_id,
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash("Urakkaosan tiedot päivitetty.", "success")
+        return redirect(url_for("admin_section_detail", section_id=section_id))
+
+    conn.close()
+    return render_template("section_form.html", project=project, section=section)
+
+
+@app.route("/admin/sections/<int:section_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_section(section_id):
+    conn = get_db()
+
+    section = conn.execute(
+        "SELECT * FROM project_sections WHERE id = ?",
+        (section_id,)
+    ).fetchone()
+
+    if not section:
+        conn.close()
+        flash("Urakkaosaa ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    files = conn.execute(
+        "SELECT stored_filename FROM section_files WHERE section_id = ?",
+        (section_id,)
+    ).fetchall()
+
+    attachments = conn.execute(
+        "SELECT attachment_stored_filename FROM bids WHERE section_id = ?",
+        (section_id,)
+    ).fetchall()
+
+    for file_row in files:
+        safe_remove_file(file_row["stored_filename"])
+
+    for bid in attachments:
+        safe_remove_file(bid["attachment_stored_filename"])
+
+    project_id = section["project_id"]
+
+    conn.execute("DELETE FROM project_sections WHERE id = ?", (section_id,))
+    conn.commit()
+    conn.close()
+
+    flash("Urakkaosa poistettu.", "success")
+    return redirect(url_for("admin_project_detail", project_id=project_id))
+
+
+@app.route("/admin/sections/<int:section_id>")
+@login_required
+@admin_required
+def admin_section_detail(section_id):
+    conn = get_db()
+
+    section = conn.execute("""
+        SELECT
+            ps.*,
+            p.title AS project_title,
+            p.id AS project_id
+        FROM project_sections ps
+        JOIN projects p ON p.id = ps.project_id
+        WHERE ps.id = ?
+    """, (section_id,)).fetchone()
+
+    if not section:
+        conn.close()
+        flash("Urakkaosaa ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    files = conn.execute("""
+        SELECT
+            sf.*,
+            u.name AS uploaded_by_name
+        FROM section_files sf
+        JOIN users u ON u.id = sf.uploaded_by
+        WHERE sf.section_id = ?
+        ORDER BY sf.created_at DESC
+    """, (section_id,)).fetchall()
+
+    bids = conn.execute("""
+        SELECT
+            b.*,
+            u.name AS contractor_name,
+            u.company_name,
+            u.email,
+            u.phone
+        FROM bids b
+        JOIN users u ON u.id = b.contractor_id
+        WHERE b.section_id = ?
+        ORDER BY b.created_at DESC
+    """, (section_id,)).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "admin_section_detail.html",
+        section=section,
+        files=files,
+        bids=bids,
+    )
+
+
+@app.route("/admin/sections/<int:section_id>/files/upload", methods=["POST"])
+@login_required
+@admin_required
+def upload_section_file(section_id):
+    note = request.form.get("note", "").strip()
+    uploaded_file = request.files.get("file")
+
+    if not uploaded_file or uploaded_file.filename == "":
+        flash("Valitse ladattava tiedosto.", "danger")
+        return redirect(url_for("admin_section_detail", section_id=section_id))
+
+    if not allowed_file(uploaded_file.filename):
+        flash("Tiedostomuoto ei ole sallittu.", "danger")
+        return redirect(url_for("admin_section_detail", section_id=section_id))
+
+    conn = get_db()
+
+    section = conn.execute(
+        "SELECT id FROM project_sections WHERE id = ?",
+        (section_id,)
+    ).fetchone()
+
+    if not section:
+        conn.close()
+        flash("Urakkaosaa ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    original_filename = uploaded_file.filename
+    stored_filename = make_stored_filename(original_filename)
+    file_type = original_filename.rsplit(".", 1)[1].lower()
+
+    uploaded_file.save(os.path.join(UPLOAD_FOLDER, stored_filename))
+
+    conn.execute("""
+        INSERT INTO section_files (
+            section_id, uploaded_by, original_filename,
+            stored_filename, file_type, note, created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        section_id,
+        session["user_id"],
+        original_filename,
+        stored_filename,
+        file_type,
+        note,
+        now_str(),
+    ))
+
+    conn.commit()
+    conn.close()
+
+    flash("Tiedosto lisätty urakkaosaan.", "success")
+    return redirect(url_for("admin_section_detail", section_id=section_id))
+
+
+@app.route("/admin/files/<int:file_id>/delete", methods=["POST"])
+@login_required
+@admin_required
+def delete_section_file(file_id):
+    conn = get_db()
+
+    file_row = conn.execute(
+        "SELECT * FROM section_files WHERE id = ?",
+        (file_id,)
+    ).fetchone()
+
+    if not file_row:
+        conn.close()
+        flash("Tiedostoa ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    section_id = file_row["section_id"]
+
+    safe_remove_file(file_row["stored_filename"])
+
+    conn.execute("DELETE FROM section_files WHERE id = ?", (file_id,))
+    conn.commit()
+    conn.close()
+
+    flash("Tiedosto poistettu.", "success")
+    return redirect(url_for("admin_section_detail", section_id=section_id))
+
+
+@app.route("/admin/bids/<int:bid_id>/status", methods=["POST"])
+@login_required
+@admin_required
+def update_bid_status(bid_id):
+    new_status = request.form.get("status", "submitted")
+
+    allowed_statuses = {"submitted", "reviewing", "accepted", "rejected"}
+
+    if new_status not in allowed_statuses:
+        flash("Virheellinen tarjousstatus.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    conn = get_db()
+
+    bid = conn.execute(
+        "SELECT * FROM bids WHERE id = ?",
+        (bid_id,)
+    ).fetchone()
+
+    if not bid:
+        conn.close()
+        flash("Tarjousta ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    conn.execute(
+        "UPDATE bids SET status = ? WHERE id = ?",
+        (new_status, bid_id)
+    )
+
+    conn.commit()
+    conn.close()
+
+    flash("Tarjouksen status päivitetty.", "success")
+    return redirect(url_for("admin_section_detail", section_id=bid["section_id"]))
+
+@app.route("/admin/bids")
+@login_required
+@admin_required
+def admin_bids():
+    conn = get_db()
+
+    rows = conn.execute("""
+        SELECT
+            b.*,
+            u.name AS contractor_name,
+            u.company_name,
+            u.email,
+            u.phone,
+            ps.id AS section_id,
+            ps.title AS section_title,
+            ps.trade_category,
+            p.id AS project_id,
+            p.title AS project_title,
+            p.location AS project_location
+        FROM bids b
+        JOIN users u ON u.id = b.contractor_id
+        JOIN project_sections ps ON ps.id = b.section_id
+        JOIN projects p ON p.id = ps.project_id
+        ORDER BY p.title ASC, ps.title ASC, b.created_at DESC
+    """).fetchall()
+
+    conn.close()
+
+    grouped = {}
+
+    for bid in rows:
+        project_id = bid["project_id"]
+        section_id = bid["section_id"]
+
+        if project_id not in grouped:
+            grouped[project_id] = {
+                "project_title": bid["project_title"],
+                "project_location": bid["project_location"],
+                "sections": {}
+            }
+
+        if section_id not in grouped[project_id]["sections"]:
+            grouped[project_id]["sections"][section_id] = {
+                "section_title": bid["section_title"],
+                "trade_category": bid["trade_category"],
+                "bids": []
+            }
+
+        grouped[project_id]["sections"][section_id]["bids"].append(bid)
+
+    for project in grouped.values():
+        for section in project["sections"].values():
+            section["bids"] = sorted(
+                section["bids"],
+                key=lambda bid: parse_price_value(bid["price"])
+            )
+
+    return render_template(
+        "admin_bids.html",
+        grouped=grouped,
+    )
+
+@app.route("/contractor")
+@login_required
+@approved_contractor_required
+def contractor_dashboard():
+    conn = get_db()
+
+    projects = conn.execute("""
+        SELECT
+            p.*,
+            COUNT(ps.id) AS section_count
+        FROM projects p
+        LEFT JOIN project_sections ps ON ps.project_id = p.id
+        WHERE p.status = 'open'
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
+    """).fetchall()
+
+    my_bids = conn.execute("""
+        SELECT
+            b.*,
+            ps.title AS section_title,
+            p.title AS project_title
+        FROM bids b
+        JOIN project_sections ps ON ps.id = b.section_id
+        JOIN projects p ON p.id = ps.project_id
+        WHERE b.contractor_id = ?
+        ORDER BY b.created_at DESC
+        LIMIT 5
+    """, (session["user_id"],)).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "contractor_dashboard.html",
+        projects=projects,
+        my_bids=my_bids,
+    )
+
+
+@app.route("/projects")
+@login_required
+@approved_contractor_required
+def contractor_projects():
+    conn = get_db()
+
+    projects = conn.execute("""
+        SELECT
+            p.*,
+            COUNT(ps.id) AS section_count
+        FROM projects p
+        LEFT JOIN project_sections ps ON ps.project_id = p.id
+        COUNT(DISTINCT b.id) AS bid_count
+        WHERE p.status = 'open'
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
+    """).fetchall()
+
+    conn.close()
+
+    return render_template("contractor_projects.html", projects=projects)
+
+
+@app.route("/projects/<int:project_id>")
+@login_required
+@approved_contractor_required
+def contractor_project_detail(project_id):
+    conn = get_db()
+
+    project = conn.execute(
+        "SELECT * FROM projects WHERE id = ? AND status = 'open'",
+        (project_id,)
+    ).fetchone()
+
+    if not project:
+        conn.close()
+        flash("Projektia ei löytynyt tai se ei ole avoinna.", "danger")
+        return redirect(url_for("contractor_projects"))
+
+    sections = conn.execute("""
+        SELECT
+            ps.*,
+            (
+                SELECT COUNT(*)
+                FROM bids b
+                WHERE b.section_id = ps.id
+                AND b.contractor_id = ?
+            ) AS has_my_bid,
+            (
+                SELECT COUNT(*)
+                FROM section_files sf
+                WHERE sf.section_id = ps.id
+            ) AS file_count
+        FROM project_sections ps
+        WHERE ps.project_id = ?
+        AND ps.status = 'open'
+        ORDER BY ps.created_at DESC
+    """, (session["user_id"], project_id)).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "contractor_project_detail.html",
+        project=project,
+        sections=sections,
+    )
+
+
+@app.route("/sections/<int:section_id>", methods=["GET", "POST"])
+@login_required
+@approved_contractor_required
+def contractor_section_detail(section_id):
+    conn = get_db()
+
+    section = conn.execute("""
+        SELECT
+            ps.*,
+            p.title AS project_title,
+            p.id AS project_id,
+            p.location AS project_location
+        FROM project_sections ps
+        JOIN projects p ON p.id = ps.project_id
+        WHERE ps.id = ?
+        AND ps.status = 'open'
+        AND p.status = 'open'
+    """, (section_id,)).fetchone()
+
+    if not section:
+        conn.close()
+        flash("Urakkaosaa ei löytynyt tai se ei ole avoinna.", "danger")
+        return redirect(url_for("contractor_projects"))
+
+    existing_bid = conn.execute("""
+        SELECT *
+        FROM bids
+        WHERE section_id = ?
+        AND contractor_id = ?
+    """, (section_id, session["user_id"])).fetchone()
+
+    files = conn.execute("""
+        SELECT
+            sf.*,
+            u.name AS uploaded_by_name
+        FROM section_files sf
+        JOIN users u ON u.id = sf.uploaded_by
+        WHERE sf.section_id = ?
+        ORDER BY sf.created_at DESC
+    """, (section_id,)).fetchall()
+
+    if request.method == "POST":
+        price = request.form.get("price", "").strip()
+        message = request.form.get("message", "").strip()
+        attachment = request.files.get("attachment")
+
+        if not price:
+            conn.close()
+            flash("Tarjouksen hinta on pakollinen.", "danger")
+            return redirect(url_for("contractor_section_detail", section_id=section_id))
+
+        attachment_original_filename = None
+        attachment_stored_filename = None
+
+        if attachment and attachment.filename:
+            if not allowed_file(attachment.filename):
+                conn.close()
+                flash("Tarjousliitteen tiedostomuoto ei ole sallittu.", "danger")
+                return redirect(url_for("contractor_section_detail", section_id=section_id))
+
+            attachment_original_filename = attachment.filename
+            attachment_stored_filename = make_stored_filename(attachment_original_filename)
+            attachment.save(os.path.join(UPLOAD_FOLDER, attachment_stored_filename))
+
+        if existing_bid:
+            if attachment_stored_filename:
+                safe_remove_file(existing_bid["attachment_stored_filename"])
+
+                conn.execute("""
+                    UPDATE bids
+                    SET
+                        price = ?,
+                        message = ?,
+                        attachment_original_filename = ?,
+                        attachment_stored_filename = ?,
+                        status = 'submitted',
+                        created_at = ?
+                    WHERE id = ?
+                """, (
+                    price,
+                    message,
+                    attachment_original_filename,
+                    attachment_stored_filename,
+                    now_str(),
+                    existing_bid["id"],
+                ))
+            else:
+                conn.execute("""
+                    UPDATE bids
+                    SET
+                        price = ?,
+                        message = ?,
+                        status = 'submitted',
+                        created_at = ?
+                    WHERE id = ?
+                """, (
+                    price,
+                    message,
+                    now_str(),
+                    existing_bid["id"],
+                ))
+
+            flash("Tarjous päivitetty.", "success")
+        else:
+            conn.execute("""
+                INSERT INTO bids (
+                    section_id,
+                    contractor_id,
+                    price,
+                    message,
+                    attachment_original_filename,
+                    attachment_stored_filename,
+                    status,
+                    created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                section_id,
+                session["user_id"],
+                price,
+                message,
+                attachment_original_filename,
+                attachment_stored_filename,
+                "submitted",
+                now_str(),
+            ))
+
+            flash("Tarjous lähetetty.", "success")
+
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for("contractor_section_detail", section_id=section_id))
+
+    conn.close()
+
+    return render_template(
+        "contractor_section_detail.html",
+        section=section,
+        existing_bid=existing_bid,
+        files=files,
+    )
+
+
+init_db()
+
+if __name__ == "__main__":
+    app.run(debug=True)

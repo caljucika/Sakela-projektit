@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Urakoitsijat{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:40px;">
+
+    <h1 style="font-size:52px; margin-bottom:14px;">
+        Urakoitsijat
+    </h1>
+
+    <p
+        style="
+            color:rgba(255,255,255,0.72);
+            font-size:18px;
+            line-height:1.8;
+        "
+    >
+        Hallitse rekisteröityneitä urakoitsijoita ja hyväksy
+        uusia käyttäjiä tarjousportaaliin.
+    </p>
+
+</div>
+
+<div class="card">
+
+    {% if contractors %}
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Yritys</th>
+                        <th>Yhteyshenkilö</th>
+                        <th>Sähköposti</th>
+                        <th>Puhelin</th>
+                        <th>Status</th>
+                        <th>Toiminnot</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for contractor in contractors %}
+
+                        <tr>
+
+                            <td>
+                                <strong>
+                                    {{ contractor.company_name }}
+                                </strong>
+                            </td>
+
+                            <td>
+                                {{ contractor.name }}
+                            </td>
+
+                            <td>
+                                {{ contractor.email }}
+                            </td>
+
+                            <td>
+                                {{ contractor.phone or "-" }}
+                            </td>
+
+                            <td>
+
+                                <span
+                                    class="
+                                        status-pill
+                                        status-{{ contractor.contractor_status }}
+                                    "
+                                >
+                                    {{ contractor.contractor_status }}
+                                </span>
+
+                            </td>
+
+                            <td>
+
+                                <div
+                                    style="
+                                        display:flex;
+                                        gap:10px;
+                                        flex-wrap:wrap;
+                                    "
+                                >
+
+                                    {% if contractor.contractor_status != "approved" %}
+
+                                        <form
+                                            method="POST"
+                                            action="{{ url_for('approve_contractor', user_id=contractor.id) }}"
+                                        >
+                                            <button
+                                                type="submit"
+                                                class="btn btn-small"
+                                            >
+                                                Hyväksy
+                                            </button>
+                                        </form>
+
+                                    {% endif %}
+
+                                    {% if contractor.contractor_status != "rejected" %}
+
+                                        <form
+                                            method="POST"
+                                            action="{{ url_for('reject_contractor', user_id=contractor.id) }}"
+                                        >
+                                            <button
+                                                type="submit"
+                                                class="btn btn-small"
+                                                style="
+                                                    background:linear-gradient(135deg,#dc2626,#991b1b);
+                                                "
+                                            >
+                                                Hylkää
+                                            </button>
+                                        </form>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+            Ei urakoitsijoita vielä.
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

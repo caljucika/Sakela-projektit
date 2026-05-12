@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Tarjousvertailu{% endblock %}
+
+{% block content %}
+
+<div style="margin-bottom:42px;">
+    <div
+        style="
+            display:inline-flex;
+            padding:8px 13px;
+            border-radius:999px;
+            background:rgba(245,158,11,0.12);
+            border:1px solid rgba(245,158,11,0.25);
+            color:#fcd34d;
+            font-weight:800;
+            margin-bottom:18px;
+        "
+    >
+        Tarjousvertailu
+    </div>
+
+    <h1 style="font-size:56px; letter-spacing:-0.055em; margin-bottom:14px;">
+        Tarjoukset projekteittain
+    </h1>
+
+    <p class="muted" style="font-size:18px; line-height:1.8; max-width:860px;">
+        Katso, mihin projekteihin ja urakkaosiin tarjoukset ovat saapuneet.
+        Jokaisen urakkaosan tarjoukset näytetään halvimmasta kalleimpaan.
+    </p>
+</div>
+
+{% if grouped %}
+
+    <div class="grid">
+
+        {% for project_id, project in grouped.items() %}
+
+            <div class="card">
+
+                <div style="margin-bottom:30px;">
+                    <h2 style="font-size:36px; letter-spacing:-0.045em; margin-bottom:10px;">
+                        {{ project.project_title }}
+                    </h2>
+
+                    {% if project.project_location %}
+                        <div class="muted">
+                            📍 {{ project.project_location }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="grid">
+
+                    {% for section_id, section in project.sections.items() %}
+
+                        <div
+                            style="
+                                padding:24px;
+                                border-radius:24px;
+                                background:rgba(255,255,255,0.04);
+                                border:1px solid rgba(255,255,255,0.07);
+                            "
+                        >
+
+                            <div
+                                style="
+                                    display:flex;
+                                    justify-content:space-between;
+                                    align-items:flex-start;
+                                    gap:18px;
+                                    flex-wrap:wrap;
+                                    margin-bottom:22px;
+                                "
+                            >
+                                <div>
+                                    <h3 style="font-size:28px; letter-spacing:-0.04em; margin-bottom:8px;">
+                                        {{ section.section_title }}
+                                    </h3>
+
+                                    {% if section.trade_category %}
+                                        <div class="muted">
+                                            🏗️ {{ section.trade_category }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div
+                                    style="
+                                        padding:12px 16px;
+                                        border-radius:999px;
+                                        background:rgba(245,158,11,0.12);
+                                        border:1px solid rgba(245,158,11,0.25);
+                                        font-weight:900;
+                                        color:#fcd34d;
+                                    "
+                                >
+                                    {{ section.bids|length }} tarjousta
+                                </div>
+                            </div>
+
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Urakoitsija</th>
+                                            <th>Tarjous</th>
+                                            <th>Status</th>
+                                            <th>Päiväys</th>
+                                            <th>Toiminnot</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {% for bid in section.bids %}
+                                            <tr>
+                                                <td>
+                                                    {% if loop.index <= 3 %}
+                                                        <strong style="color:#f59e0b;">
+                                                            {{ loop.index }}.
+                                                        </strong>
+                                                    {% else %}
+                                                        {{ loop.index }}.
+                                                    {% endif %}
+                                                </td>
+
+                                                <td>
+                                                    <strong>{{ bid.company_name }}</strong>
+
+                                                    <div class="muted" style="margin-top:6px; line-height:1.6;">
+                                                        {{ bid.contractor_name }}<br>
+                                                        {{ bid.email }}
+
+                                                        {% if bid.phone %}
+                                                            <br>{{ bid.phone }}
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+
+                                                <td>
+                                                    <strong style="color:#f59e0b; font-size:22px;">
+                                                        {{ bid.price }}
+                                                    </strong>
+
+                                                    {% if loop.index == 1 %}
+                                                        <div style="margin-top:8px;">
+                                                            <span class="status-pill status-approved">
+                                                                Halvin
+                                                            </span>
+                                                        </div>
+                                                    {% elif loop.index <= 3 %}
+                                                        <div style="margin-top:8px;">
+                                                            <span class="status-pill status-reviewing">
+                                                                Top 3
+                                                            </span>
+                                                        </div>
+                                                    {% endif %}
+                                                </td>
+
+                                                <td>
+                                                    <span class="status-pill status-{{ bid.status }}">
+                                                        {% if bid.status == "submitted" %}
+                                                            Uusi
+                                                        {% elif bid.status == "reviewing" %}
+                                                            Käsittelyssä
+                                                        {% elif bid.status == "accepted" %}
+                                                            Hyväksytty
+                                                        {% elif bid.status == "rejected" %}
+                                                            Hylätty
+                                                        {% else %}
+                                                            {{ bid.status }}
+                                                        {% endif %}
+                                                    </span>
+                                                </td>
+
+                                                <td>
+                                                    {{ bid.created_at }}
+                                                </td>
+
+                                                <td>
+                                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                                        <a
+                                                            href="{{ url_for('admin_section_detail', section_id=bid.section_id) }}"
+                                                            class="btn btn-small"
+                                                        >
+                                                            Avaa urakkaosa
+                                                        </a>
+
+                                                        {% if bid.attachment_stored_filename %}
+                                                            <a
+                                                                href="{{ url_for('download_bid_attachment', bid_id=bid.id) }}"
+                                                                class="btn btn-small"
+                                                            >
+                                                                Liite
+                                                            </a>
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+    </div>
+
+{% else %}
+
+    <div class="card">
+        <div class="empty-state">
+            <h2 style="margin-bottom:16px;">
+                Ei tarjouksia vielä
+            </h2>
+
+            <p class="muted">
+                Saapuneet tarjoukset näkyvät täällä projekteittain ja urakkaosittain.
+            </p>
+        </div>
+    </div>
+
+{% endif %}
+
+{% endblock %}

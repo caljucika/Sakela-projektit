@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Kirjaudu sisään{% endblock %}
+
+{% block content %}
+
+<div class="form-wrap">
+
+    <div class="card">
+
+        <h1 style="font-size:42px; margin-bottom:14px;">
+            Kirjaudu sisään
+        </h1>
+
+        <p style="color:rgba(255,255,255,0.72); margin-bottom:34px; line-height:1.7;">
+            Kirjaudu Sakela Urakkaportaaliin sähköpostilla ja salasanalla.
+        </p>
+
+        <form method="POST">
+
+            <div class="form-group">
+                <label>Sähköposti</label>
+
+                <input
+                    type="email"
+                    name="email"
+                    class="form-control"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Salasana</label>
+
+                <input
+                    type="password"
+                    name="password"
+                    class="form-control"
+                    required
+                >
+            </div>
+
+            <button type="submit" class="btn">
+                Kirjaudu sisään
+            </button>
+
+        </form>
+
+        <div style="margin-top:28px; color:rgba(255,255,255,0.7);">
+            Ei vielä tunnuksia?
+
+            <a
+                href="{{ url_for('register') }}"
+                style="color:#f59e0b; font-weight:bold;"
+            >
+                Hae urakoitsijaksi
+            </a>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

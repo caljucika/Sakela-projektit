@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Sakela Urakkaportaali{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+    <div
+        style="
+            display:inline-flex;
+            align-items:center;
+            gap:10px;
+            padding:9px 14px;
+            border-radius:999px;
+            background:rgba(245,158,11,0.12);
+            border:1px solid rgba(245,158,11,0.25);
+            color:#fcd34d;
+            font-weight:800;
+            margin-bottom:26px;
+        "
+    >
+        Rakennusprojektien tarjous- ja dokumenttihallinta
+    </div>
+
+    <h1>
+        Yksi portaali projekteille, piirustuksille ja tarjouksille.
+    </h1>
+
+    <p>
+        Sakela Urakkaportaali kokoaa avoimet rakennuskohteet,
+        urakkaosat, suunnitelmat, piirustukset ja urakoitsijoiden
+        tarjoukset yhteen selkeään järjestelmään.
+    </p>
+
+    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+        <a href="{{ url_for('login') }}" class="btn">
+            Kirjaudu sisään
+        </a>
+
+        <a href="{{ url_for('register') }}" class="btn">
+            Hae urakoitsijaksi
+        </a>
+    </div>
+</section>
+
+<section style="margin-top:40px;">
+    <div class="grid grid-3">
+
+        <div class="stat-card">
+            <h3>Projektit</h3>
+            <p>01</p>
+            <div class="muted" style="line-height:1.7;">
+                Rakennuskohteet jaetaan selkeisiin urakkaosiin.
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <h3>Piirustukset</h3>
+            <p>02</p>
+            <div class="muted" style="line-height:1.7;">
+                Suunnitelmat ja dokumentit pysyvät tallessa yhdessä paikassa.
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <h3>Tarjoukset</h3>
+            <p>03</p>
+            <div class="muted" style="line-height:1.7;">
+                Urakoitsijat jättävät tarjoukset suoraan portaaliin.
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<section style="margin-top:80px;">
+    <h2 class="section-title">
+        Miten portaali toimii?
+    </h2>
+
+    <div class="grid grid-3">
+
+        <div class="card">
+            <div
+                style="
+                    width:52px;
+                    height:52px;
+                    border-radius:18px;
+                    background:rgba(245,158,11,0.14);
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-size:24px;
+                    margin-bottom:22px;
+                "
+            >
+                🏗️
+            </div>
+
+            <h3 style="font-size:24px; margin-bottom:14px;">
+                Työnjohto lisää projektit
+            </h3>
+
+            <p class="muted" style="line-height:1.9;">
+                Sakelan työnjohto luo rakennusprojektit,
+                jakaa ne urakkaosiin ja lisää tarvittavat
+                suunnitelmat sekä piirustukset.
+            </p>
+        </div>
+
+        <div class="card">
+            <div
+                style="
+                    width:52px;
+                    height:52px;
+                    border-radius:18px;
+                    background:rgba(245,158,11,0.14);
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-size:24px;
+                    margin-bottom:22px;
+                "
+            >
+                📎
+            </div>
+
+            <h3 style="font-size:24px; margin-bottom:14px;">
+                Urakoitsijat näkevät aineistot
+            </h3>
+
+            <p class="muted" style="line-height:1.9;">
+                Hyväksytyt urakoitsijat voivat tarkastella
+                avoimia kohteita, ladata piirustuksia ja
+                tutustua tarjouspyyntöihin.
+            </p>
+        </div>
+
+        <div class="card">
+            <div
+                style="
+                    width:52px;
+                    height:52px;
+                    border-radius:18px;
+                    background:rgba(245,158,11,0.14);
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-size:24px;
+                    margin-bottom:22px;
+                "
+            >
+                💰
+            </div>
+
+            <h3 style="font-size:24px; margin-bottom:14px;">
+                Tarjoukset yhdessä näkymässä
+            </h3>
+
+            <p class="muted" style="line-height:1.9;">
+                Tarjoukset, tarjousliitteet ja urakoitsijoiden
+                yhteystiedot löytyvät hallinnasta ilman
+                sähköpostikaaosta.
+            </p>
+        </div>
+
+    </div>
+</section>
+
+<section style="margin-top:80px;">
+    <div
+        class="card"
+        style="
+            display:grid;
+            grid-template-columns:1.2fr 0.8fr;
+            gap:34px;
+            align-items:center;
+        "
+    >
+        <div>
+            <h2 style="font-size:40px; margin-bottom:18px; letter-spacing:-0.04em;">
+                Haluatko mukaan Sakelan urakoitsijaverkostoon?
+            </h2>
+
+            <p class="muted" style="line-height:1.9; margin-bottom:28px;">
+                Rekisteröidy urakoitsijaksi ja hae mukaan tarjousverkostoon.
+                Hyväksynnän jälkeen pääset tarkastelemaan avoimia urakkaosia,
+                lataamaan piirustuksia ja jättämään tarjouksia.
+            </p>
+
+            <a href="{{ url_for('register') }}" class="btn">
+                Rekisteröidy urakoitsijaksi
+            </a>
+        </div>
+
+        <div
+            style="
+                padding:26px;
+                border-radius:24px;
+                background:rgba(255,255,255,0.045);
+                border:1px solid rgba(255,255,255,0.08);
+            "
+        >
+            <h3 style="font-size:24px; margin-bottom:18px;">
+                Urakoitsijalle
+            </h3>
+
+            <div class="muted" style="line-height:2;">
+                <div>• Näe avoimet tarjouskohteet</div>
+                <div>• Lataa suunnitelmat ja piirustukset</div>
+                <div>• Jätä tarjous suoraan portaaliin</div>
+                <div>• Lisää tarjousliite tarvittaessa</div>
+                <div>• Seuraa tarjouksen tilaa</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

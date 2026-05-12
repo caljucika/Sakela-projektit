@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Sakela Urakkaportaali{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3">
+</head>
+<body>
+
+<header class="topbar">
+
+    <a href="{{ url_for('index') }}" class="brand">
+        <span class="brand-mark">S</span>
+
+        <span>
+            <strong>Sakela</strong>
+            <small>Urakkaportaali</small>
+        </span>
+    </a>
+
+    <nav class="nav">
+        {% if current_user %}
+
+            {% if current_user.role == "admin" %}
+                <a href="{{ url_for('admin_dashboard') }}">Hallinta</a>
+                <a href="{{ url_for('admin_projects') }}">Projektit</a>
+                <a href="{{ url_for('admin_bids') }}">Tarjoukset</a>
+                <a href="{{ url_for('admin_contractors') }}">Urakoitsijat</a>
+            {% else %}
+                <a href="{{ url_for('contractor_dashboard') }}">Etusivu</a>
+                <a href="{{ url_for('contractor_projects') }}">Avoimet kohteet</a>
+            {% endif %}
+
+            <span class="user-pill">
+                {{ current_user.name }}
+            </span>
+
+            <a href="{{ url_for('logout') }}" class="btn btn-small">
+                Kirjaudu ulos
+            </a>
+
+        {% else %}
+
+            <a href="{{ url_for('login') }}">Kirjaudu</a>
+
+            <a href="{{ url_for('register') }}" class="btn btn-small">
+                Hae urakoitsijaksi
+            </a>
+
+        {% endif %}
+    </nav>
+
+</header>
+
+<main class="page">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-wrap">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+</main>
+
+<footer
+    style="
+        max-width:1440px;
+        margin:0 auto;
+        padding:0 24px 34px;
+        color:rgba(255,255,255,0.42);
+        font-size:14px;
+        display:flex;
+        justify-content:space-between;
+        gap:18px;
+        flex-wrap:wrap;
+    "
+>
+    <div>
+        © Sakela Urakkaportaali
+    </div>
+
+    <div>
+        Projektit · Piirustukset · Tarjoukset
+    </div>
+</footer>
+
+</body>
+</html>
