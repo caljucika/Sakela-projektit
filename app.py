@@ -648,33 +648,51 @@ def edit_project(project_id):
 def delete_project(project_id):
     conn = get_db()
 
-    files = conn.execute("""
-        SELECT sf.stored_filename
-        FROM section_files sf
-        JOIN project_sections ps ON ps.id = sf.section_id
-        WHERE ps.project_id = ?
-    """, (project_id,)).fetchall()
+    project = conn.execute(
+        "SELECT * FROM projects WHERE id = ?",
+        (project_id,)
+    ).fetchone()
 
-    attachments = conn.execute("""
-        SELECT b.attachment_stored_filename
-        FROM bids b
-        JOIN project_sections ps ON ps.id = b.section_id
-        WHERE ps.project_id = ?
-    """, (project_id,)).fetchall()
+    if not project:
+        conn.close()
+        flash("Projektia ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
 
-    for file_row in files:
-        safe_remove_file(file_row["stored_filename"])
+    section_ids = conn.execute(
+        "SELECT id FROM project_sections WHERE project_id = ?",
+        (project_id,)
+    ).fetchall()
 
-    for bid in attachments:
-        safe_remove_file(bid["attachment_stored_filename"])
+    for section in section_ids:
+        section_id = section["id"]
+
+        files = conn.execute(
+            "SELECT stored_filename FROM section_files WHERE section_id = ?",
+            (section_id,)
+        ).fetchall()
+
+        for file_row in files:
+            safe_remove_file(file_row["stored_filename"])
+
+        attachments = conn.execute(
+            "SELECT attachment_stored_filename FROM bids WHERE section_id = ?",
+            (section_id,)
+        ).fetchall()
+
+        for bid in attachments:
+            safe_remove_file(bid["attachment_stored_filename"])
+
+        conn.execute("DELETE FROM section_files WHERE section_id = ?", (section_id,))
+        conn.execute("DELETE FROM bids WHERE section_id = ?", (section_id,))
+        conn.execute("DELETE FROM project_sections WHERE id = ?", (section_id,))
 
     conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+
     conn.commit()
     conn.close()
 
     flash("Projekti poistettu.", "success")
     return redirect(url_for("admin_projects"))
-
 
 @app.route("/admin/projects/<int:project_id>")
 @login_required
