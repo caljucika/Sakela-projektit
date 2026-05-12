@@ -537,24 +537,32 @@ def admin_projects():
             SELECT
                 p.*,
                 COUNT(DISTINCT ps.id) AS section_count,
-                COUNT(DISTINCT b.id) AS bid_count
+                COUNT(DISTINCT b.id) AS bid_count,
                 MAX(b.created_at) AS latest_bid_at
             FROM projects p
             LEFT JOIN project_sections ps ON ps.project_id = p.id
             LEFT JOIN bids b ON b.section_id = ps.id
+            WHERE
+                p.title LIKE ?
+                OR p.location LIKE ?
+                OR p.description LIKE ?
             GROUP BY p.id
             ORDER BY p.created_at DESC
-        """).fetchall()
+        """, (
+            f"%{search}%",
+            f"%{search}%",
+            f"%{search}%"
+        )).fetchall()
     else:
         projects = conn.execute("""
             SELECT
                 p.*,
                 COUNT(DISTINCT ps.id) AS section_count,
-                COUNT(DISTINCT b.id) AS bid_count
+                COUNT(DISTINCT b.id) AS bid_count,
                 MAX(b.created_at) AS latest_bid_at
-                LEFT JOIN bids b ON b.section_id = ps.id
             FROM projects p
             LEFT JOIN project_sections ps ON ps.project_id = p.id
+            LEFT JOIN bids b ON b.section_id = ps.id
             GROUP BY p.id
             ORDER BY p.created_at DESC
         """).fetchall()
