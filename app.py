@@ -163,6 +163,9 @@ def init_db():
     if not column_exists(conn, "bids", "attachment_stored_filename"):
         cur.execute("ALTER TABLE bids ADD COLUMN attachment_stored_filename TEXT")
 
+    if not column_exists(conn, "project_sections", "Littera"):
+        cur.execute("ALTER TABLE project_sections ADD COLUMN Littera TEXT")
+
     conn.commit()
 
     admin_email = "admin@sakela.fi"
@@ -1129,6 +1132,48 @@ def admin_bids():
     return render_template(
         "admin_bids.html",
         grouped=grouped,
+    )
+
+@app.route("/contractor")
+@login_required
+@approved_contractor_required
+def contractor_dashboard():
+    conn = get_db()
+
+    projects = conn.execute("""
+        SELECT
+            p.*,
+            COUNT(DISTINCT ps.id) AS section_count,
+            COUNT(DISTINCT b.id) AS bid_count,
+            MAX(b.created_at) AS latest_bid_at
+        FROM projects p
+        LEFT JOIN project_sections ps ON ps.project_id = p.id
+        LEFT JOIN bids b ON b.section_id = ps.id
+        WHERE p.status = 'open'
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
+        LIMIT 5
+    """).fetchall()
+
+    my_bids = conn.execute("""
+        SELECT
+            b.*,
+            ps.title AS section_title,
+            p.title AS project_title
+        FROM bids b
+        JOIN project_sections ps ON ps.id = b.section_id
+        JOIN projects p ON p.id = ps.project_id
+        WHERE b.contractor_id = ?
+        ORDER BY b.created_at DESC
+        LIMIT 5
+    """, (session["user_id"],)).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "contractor_dashboard.html",
+        projects=projects,
+        my_bids=my_bids,
     )
 
 @app.route("/projects")
