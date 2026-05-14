@@ -99,6 +99,30 @@
             </div>
 
             <div class="form-group">
+                <label>Näkyvyys</label>
+
+                <select name="visibility" class="form-control">
+                    <option
+                        value="public"
+                        {% if not project or not project.visibility or project.visibility == "public" %}
+                            selected
+                        {% endif %}
+                    >
+                        Julkinen — näkyy kaikille hyväksytyille urakoitsijoille
+                    </option>
+
+                    <option
+                        value="private"
+                        {% if project and project.visibility == "private" %}
+                            selected
+                        {% endif %}
+                    >
+                        Salainen — näkyy vain kutsutuille myöhemmin
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label>Kuvaus</label>
 
                 <textarea

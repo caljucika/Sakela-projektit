@@ -166,6 +166,9 @@ def init_db():
     if not column_exists(conn, "project_sections", "Littera"):
         cur.execute("ALTER TABLE project_sections ADD COLUMN Littera TEXT")
 
+    if not column_exists(conn, "projects", "visibility"):
+        cur.execute("ALTER TABLE projects ADD COLUMN visibility TEXT DEFAULT 'public'")
+
     if not column_exists(conn, "users", "business_id"):
         cur.execute("ALTER TABLE users ADD COLUMN business_id TEXT")
 
@@ -606,6 +609,7 @@ def new_project():
         description = request.form.get("description", "").strip()
         deadline = request.form.get("deadline", "").strip()
         status = request.form.get("status", "open")
+        visibility = request.form.get("visibility", "public")
 
         if not title:
             flash("Projektin nimi on pakollinen.", "danger")
@@ -614,10 +618,10 @@ def new_project():
         conn = get_db()
         conn.execute("""
             INSERT INTO projects (
-                title, location, description, deadline, status, created_at
+                title, location, description, deadline, status, visibility, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (title, location, description, deadline, status, now_str()))
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (title, location, description, deadline, status, visibility, now_str()))
         conn.commit()
         conn.close()
 
@@ -649,6 +653,7 @@ def edit_project(project_id):
         description = request.form.get("description", "").strip()
         deadline = request.form.get("deadline", "").strip()
         status = request.form.get("status", "open")
+        visibility = request.form.get("visibility", "public")
 
         if not title:
             conn.close()
@@ -657,9 +662,9 @@ def edit_project(project_id):
 
         conn.execute("""
             UPDATE projects
-            SET title = ?, location = ?, description = ?, deadline = ?, status = ?
+            SET title = ?, location = ?, description = ?, deadline = ?, status = ?, visibility = ?
             WHERE id = ?
-        """, (title, location, description, deadline, status, project_id))
+        """, (title, location, description, deadline, status, visibility, project_id))
 
         conn.commit()
         conn.close()
@@ -1215,6 +1220,7 @@ def contractor_projects():
             FROM projects p
             LEFT JOIN project_sections ps ON ps.project_id = p.id
             LEFT JOIN bids b ON b.section_id = ps.id
+            WHERE COALESCE(p.visibility, 'public') = 'public'
             GROUP BY p.id
             ORDER BY p.created_at DESC
         """).fetchall()
@@ -1229,6 +1235,7 @@ def contractor_projects():
             LEFT JOIN project_sections ps ON ps.project_id = p.id
             LEFT JOIN bids b ON b.section_id = ps.id
             WHERE p.status = 'open'
+            AND COALESCE(p.visibility, 'public') = 'public'
             GROUP BY p.id
             ORDER BY p.created_at DESC
         """).fetchall()
@@ -1248,10 +1255,13 @@ def contractor_projects():
 def contractor_project_detail(project_id):
     conn = get_db()
 
-    project = conn.execute(
-        "SELECT * FROM projects WHERE id = ? AND status = 'open'",
-        (project_id,)
-    ).fetchone()
+    project = conn.execute("""
+        SELECT *
+        FROM projects
+        WHERE id = ?
+        AND status = 'open'
+        AND COALESCE(visibility, 'public') = 'public'
+    """, (project_id,)).fetchone()
 
     if not project:
         conn.close()
