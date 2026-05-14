@@ -1,98 +1,103 @@
 {% extends "base.html" %}
 
-{% block title %}Urakoitsijarekisteröinti{% endblock %}
+{% block title %}Rekisteröidy urakoitsijaksi{% endblock %}
 
 {% block content %}
 
 <div class="form-wrap">
-
     <div class="card">
-
-        <h1 style="font-size:42px; margin-bottom:14px;">
-            Urakoitsijarekisteröinti
+        <h1 style="font-size:44px; margin-bottom:14px;">
+            Hae urakoitsijaksi
         </h1>
 
-        <p style="color:rgba(255,255,255,0.72); margin-bottom:34px; line-height:1.7;">
-            Rekisteröidy Sakela Urakkaportaaliin urakoitsijaksi.
-            Työnjohto tarkistaa ja hyväksyy uudet käyttäjät ennen
-            portaalin käyttöönottoa.
+        <p class="muted" style="line-height:1.8; margin-bottom:30px;">
+            Täytä yrityksesi tiedot. Työnjohto hyväksyy rekisteröinnin ennen portaalin käyttöä.
         </p>
 
         <form method="POST">
-
             <div class="form-group">
                 <label>Yhteyshenkilön nimi *</label>
-
-                <input
-                    type="text"
-                    name="name"
-                    class="form-control"
-                    required
-                >
-            </div>
-
-            <div class="form-group">
-                <label>Yrityksen nimi *</label>
-
-                <input
-                    type="text"
-                    name="company_name"
-                    class="form-control"
-                    required
-                >
+                <input type="text" name="name" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label>Sähköposti *</label>
-
-                <input
-                    type="email"
-                    name="email"
-                    class="form-control"
-                    required
-                >
-            </div>
-
-            <div class="form-group">
-                <label>Puhelinnumero</label>
-
-                <input
-                    type="text"
-                    name="phone"
-                    class="form-control"
-                >
+                <input type="email" name="email" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label>Salasana *</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
 
+            <div class="form-group">
+                <label>Yrityksen nimi *</label>
+                <input type="text" name="company_name" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>Y-tunnus</label>
                 <input
-                    type="password"
-                    name="password"
+                    type="text"
+                    name="business_id"
                     class="form-control"
-                    required
+                    placeholder="Esim. 1234567-8"
                 >
             </div>
 
+            <div class="form-group">
+                <label>Puhelin</label>
+                <input type="text" name="phone" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label>Litterat / kategoriat</label>
+
+                <div class="grid grid-2" style="gap:12px; margin-top:12px;">
+                    {% set litteras = [
+                        "Maanrakennus",
+                        "Sähkö",
+                        "LVI",
+                        "Betoni",
+                        "Purku",
+                        "Maalaus",
+                        "Kalusteet",
+                        "Pihatyöt",
+                        "Katto",
+                        "Julkisivu",
+                        "Sisätyöt",
+                        "Muut työt"
+                    ] %}
+
+                    {% for littera in litteras %}
+                        <label
+                            style="
+                                display:flex;
+                                align-items:center;
+                                gap:10px;
+                                padding:12px 14px;
+                                border-radius:14px;
+                                background:rgba(255,255,255,0.05);
+                                border:1px solid rgba(255,255,255,0.08);
+                                cursor:pointer;
+                            "
+                        >
+                            <input
+                                type="checkbox"
+                                name="contractor_litteras"
+                                value="{{ littera }}"
+                            >
+                            <span>{{ littera }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
             <button type="submit" class="btn">
-                Lähetä rekisteröityminen
+                Lähetä hakemus
             </button>
-
         </form>
-
-        <div style="margin-top:28px; color:rgba(255,255,255,0.7);">
-            Onko sinulla jo tunnukset?
-
-            <a
-                href="{{ url_for('login') }}"
-                style="color:#f59e0b; font-weight:bold;"
-            >
-                Kirjaudu sisään
-            </a>
-        </div>
-
     </div>
-
 </div>
 
 {% endblock %}

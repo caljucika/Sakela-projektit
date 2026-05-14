@@ -166,6 +166,12 @@ def init_db():
     if not column_exists(conn, "project_sections", "Littera"):
         cur.execute("ALTER TABLE project_sections ADD COLUMN Littera TEXT")
 
+    if not column_exists(conn, "users", "business_id"):
+        cur.execute("ALTER TABLE users ADD COLUMN business_id TEXT")
+
+    if not column_exists(conn, "users", "contractor_litteras"):
+        cur.execute("ALTER TABLE users ADD COLUMN contractor_litteras TEXT")
+
     conn.commit()
 
     admin_email = "admin@sakela.fi"
@@ -285,6 +291,8 @@ def register():
         password = request.form.get("password", "")
         company_name = request.form.get("company_name", "").strip()
         phone = request.form.get("phone", "").strip()
+        business_id = request.form.get("business_id", "").strip()
+        contractor_litteras = ", ".join(request.form.getlist("contractor_litteras"))
 
         if not name or not email or not password or not company_name:
             flash("Täytä kaikki pakolliset kentät.", "danger")
@@ -304,10 +312,18 @@ def register():
 
         conn.execute("""
             INSERT INTO users (
-                name, email, password_hash, role, contractor_status,
-                company_name, phone, created_at
+                name,
+                email,
+                password_hash,
+                role,
+                contractor_status,
+                company_name,
+                phone,
+                business_id,
+                contractor_litteras,
+                created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             name,
             email,
@@ -316,6 +332,8 @@ def register():
             "pending",
             company_name,
             phone,
+            business_id,
+            contractor_litteras,
             now_str(),
         ))
 
@@ -930,32 +948,31 @@ def admin_section_detail(section_id):
         ORDER BY sf.created_at DESC
     """, (section_id,)).fetchall()
 
-bids = conn.execute("""
-    SELECT
-        b.*,
-        u.name AS contractor_name,
-        u.company_name,
-        u.email,
-        u.phone
-    FROM bids b
-    JOIN users u ON u.id = b.contractor_id
-    WHERE b.section_id = ?
-""", (section_id,)).fetchall()
+    bids = conn.execute("""
+        SELECT
+            b.*,
+            u.name AS contractor_name,
+            u.company_name,
+            u.email,
+            u.phone
+        FROM bids b
+        JOIN users u ON u.id = b.contractor_id
+        WHERE b.section_id = ?
+    """, (section_id,)).fetchall()
 
-bids = sorted(
-    bids,
-    key=lambda bid: parse_price_value(bid["price"])
-)
+    bids = sorted(
+        bids,
+        key=lambda bid: parse_price_value(bid["price"])
+    )
 
-conn.close()
+    conn.close()
 
-return render_template(
-    "admin_section_detail.html",
-    section=section,
-    files=files,
-    bids=bids,
-)
-
+    return render_template(
+        "admin_section_detail.html",
+        section=section,
+        files=files,
+        bids=bids,
+    )
 
 @app.route("/admin/sections/<int:section_id>/files/upload", methods=["POST"])
 @login_required
