@@ -930,18 +930,22 @@ def admin_section_detail(section_id):
         ORDER BY sf.created_at DESC
     """, (section_id,)).fetchall()
 
-    bids = conn.execute("""
-        SELECT
-            b.*,
-            u.name AS contractor_name,
-            u.company_name,
-            u.email,
-            u.phone
-        FROM bids b
-        JOIN users u ON u.id = b.contractor_id
-        WHERE b.section_id = ?
-        ORDER BY b.created_at DESC
-    """, (section_id,)).fetchall()
+bids = conn.execute("""
+    SELECT
+        b.*,
+        u.name AS contractor_name,
+        u.company_name,
+        u.email,
+        u.phone
+    FROM bids b
+    JOIN users u ON u.id = b.contractor_id
+    WHERE b.section_id = ?
+""", (section_id,)).fetchall()
+
+bids = sorted(
+    bids,
+    key=lambda bid: parse_price_value(bid["price"])
+)
 
     conn.close()
 
