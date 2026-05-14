@@ -1216,14 +1216,7 @@ Terveisin,
 Sakela
 """
 
-            try:
-                send_email(
-                    contractor["email"],
-                    email_subject,
-                    email_body,
-                )
-            except Exception as e:
-                print("EMAIL ERROR:", e)
+
 
         except sqlite3.IntegrityError:
             pass
