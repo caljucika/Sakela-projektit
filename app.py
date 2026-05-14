@@ -947,14 +947,14 @@ bids = sorted(
     key=lambda bid: parse_price_value(bid["price"])
 )
 
-    conn.close()
+conn.close()
 
-    return render_template(
-        "admin_section_detail.html",
-        section=section,
-        files=files,
-        bids=bids,
-    )
+return render_template(
+    "admin_section_detail.html",
+    section=section,
+    files=files,
+    bids=bids,
+)
 
 
 @app.route("/admin/sections/<int:section_id>/files/upload", methods=["POST"])
