@@ -1172,8 +1172,12 @@ def invite_contractors_to_project(project_id):
         """).fetchall()
 
     invited_count = 0
+    email_sent_count = 0
+    email_failed_count = 0
 
     for contractor in contractors:
+        already_invited = False
+
         try:
             conn.execute("""
                 INSERT INTO project_invites (
@@ -1190,44 +1194,76 @@ def invite_contractors_to_project(project_id):
 
             invited_count += 1
 
-            project_link = request.host_url.rstrip("/") + url_for(
-                "contractor_project_detail",
-                project_id=project_id
-            )
+        except sqlite3.IntegrityError:
+            already_invited = True
 
-            email_subject = f"Kutsu projektiin: {project['title']}"
+        project_link = request.host_url.rstrip("/") + url_for(
+            "contractor_project_detail",
+            project_id=project_id
+        )
 
-            email_body = f"""
-Hei {contractor['name']},
+        email_subject = f"Kutsu projektiin: {project['title']}"
 
-Sinut on kutsuttu Sakela-portaalin projektiin:
+        extra_message = ""
+        if message:
+            extra_message = f"""
+
+Työnjohdon viesti:
+{message}
+"""
+
+        email_body = f"""Hei {contractor['name']},
+
+Sinut on kutsuttu Sakela Urakkaportaalin projektiin:
 
 {project['title']}
 
 Sijainti:
 {project['location'] or '-'}
-
-{f'Työnjohdon viesti:\\n{message}\\n' if message else ''}
+Rakennusaika:
+{project['deadline'] or '-'}
+{extra_message}
 
 Avaa projekti tästä:
 {project_link}
 
 Terveisin,
-Sakela
+Sakela Urakkaportaali
 """
 
+        try:
+            email_was_sent = send_email(
+                contractor["email"],
+                email_subject,
+                email_body,
+            )
 
+            if email_was_sent:
+                email_sent_count += 1
+            else:
+                email_failed_count += 1
 
-        except sqlite3.IntegrityError:
-            pass
+        except Exception as e:
+            print("EMAIL ERROR:", e)
+            email_failed_count += 1
 
     conn.commit()
     conn.close()
 
     if littera:
-        flash(f"Kutsuttu {invited_count} urakoitsijaa litteralla: {littera}. Sähköpostilähetys lisätään seuraavassa vaiheessa.", "success")
+        flash(
+            f"Kutsuttu {invited_count} uutta urakoitsijaa litteralla: {littera}. "
+            f"Sähköposteja lähetetty: {email_sent_count}. "
+            f"Epäonnistui: {email_failed_count}.",
+            "success"
+        )
     else:
-        flash(f"Kutsuttu {invited_count} urakoitsijaa projektiin. Sähköpostilähetys lisätään seuraavassa vaiheessa.", "success")
+        flash(
+            f"Kutsuttu {invited_count} uutta urakoitsijaa projektiin. "
+            f"Sähköposteja lähetetty: {email_sent_count}. "
+            f"Epäonnistui: {email_failed_count}.",
+            "success"
+        )
 
     return redirect(url_for("admin_project_detail", project_id=project_id))
 
