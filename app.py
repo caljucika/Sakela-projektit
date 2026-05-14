@@ -92,7 +92,7 @@ def send_email(to_email, subject, body, reply_to=None):
 
     msg.set_content(body)
 
-    with smtplib.SMTP(smtp_host, smtp_port) as server:
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=5) as server:
         server.starttls()
         server.login(smtp_user, smtp_password)
         server.send_message(msg)
@@ -1172,12 +1172,9 @@ def invite_contractors_to_project(project_id):
         """).fetchall()
 
     invited_count = 0
-    email_sent_count = 0
-    email_failed_count = 0
+    invited_contractors = []
 
     for contractor in contractors:
-        already_invited = False
-
         try:
             conn.execute("""
                 INSERT INTO project_invites (
@@ -1193,24 +1190,24 @@ def invite_contractors_to_project(project_id):
             ))
 
             invited_count += 1
+            invited_contractors.append(contractor)
 
         except sqlite3.IntegrityError:
-            already_invited = True
+            invited_contractors.append(contractor)
 
+    conn.commit()
+    conn.close()
+
+    email_sent_count = 0
+    email_failed_count = 0
+
+    for contractor in invited_contractors:
         project_link = request.host_url.rstrip("/") + url_for(
             "contractor_project_detail",
             project_id=project_id
         )
 
         email_subject = f"Kutsu projektiin: {project['title']}"
-
-        extra_message = ""
-        if message:
-            extra_message = f"""
-
-Työnjohdon viesti:
-{message}
-"""
 
         email_body = f"""Hei {contractor['name']},
 
@@ -1220,9 +1217,11 @@ Sinut on kutsuttu Sakela Urakkaportaalin projektiin:
 
 Sijainti:
 {project['location'] or '-'}
+
 Rakennusaika:
 {project['deadline'] or '-'}
-{extra_message}
+
+{message if message else ''}
 
 Avaa projekti tästä:
 {project_link}
@@ -1232,41 +1231,22 @@ Sakela Urakkaportaali
 """
 
         try:
-            email_was_sent = send_email(
-                contractor["email"],
-                email_subject,
-                email_body,
-            )
-
-            if email_was_sent:
+            if send_email(contractor["email"], email_subject, email_body):
                 email_sent_count += 1
             else:
                 email_failed_count += 1
-
         except Exception as e:
             print("EMAIL ERROR:", e)
             email_failed_count += 1
 
-    conn.commit()
-    conn.close()
-
-    if littera:
-        flash(
-            f"Kutsuttu {invited_count} uutta urakoitsijaa litteralla: {littera}. "
-            f"Sähköposteja lähetetty: {email_sent_count}. "
-            f"Epäonnistui: {email_failed_count}.",
-            "success"
-        )
-    else:
-        flash(
-            f"Kutsuttu {invited_count} uutta urakoitsijaa projektiin. "
-            f"Sähköposteja lähetetty: {email_sent_count}. "
-            f"Epäonnistui: {email_failed_count}.",
-            "success"
-        )
+    flash(
+        f"Kutsuttu {invited_count} uutta urakoitsijaa. "
+        f"Sähköposteja lähetetty: {email_sent_count}. "
+        f"Epäonnistui: {email_failed_count}.",
+        "success"
+    )
 
     return redirect(url_for("admin_project_detail", project_id=project_id))
-
 @app.route("/admin/bids")
 @login_required
 @admin_required
