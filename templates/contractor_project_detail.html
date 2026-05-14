@@ -4,133 +4,82 @@
 
 {% block content %}
 
-<div
-    style="
-        display:flex;
-        justify-content:space-between;
-        align-items:flex-start;
-        gap:24px;
-        flex-wrap:wrap;
-        margin-bottom:42px;
-    "
->
+<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:24px; flex-wrap:wrap; margin-bottom:34px;">
     <div>
-        <div
-            style="
-                display:inline-flex;
-                padding:8px 13px;
-                border-radius:999px;
-                background:rgba(245,158,11,0.12);
-                border:1px solid rgba(245,158,11,0.25);
-                color:#fcd34d;
-                font-weight:800;
-                margin-bottom:18px;
-            "
-        >
-            Rakennusprojekti
-        </div>
+        <h1 style="font-size:48px; letter-spacing:-0.055em; margin-bottom:12px;">
+            {{ project.title }}
+        </h1>
 
-        <div
-            style="
-                display:flex;
-                align-items:center;
-                gap:16px;
-                flex-wrap:wrap;
-                margin-bottom:14px;
-            "
-        >
-            <h1 style="font-size:56px; letter-spacing:-0.055em;">
-                {{ project.title }}
-            </h1>
-
-            <span class="status-pill status-{{ project.status }}">
-                {% if project.status == "open" %}
-                    Avoin
-                {% else %}
-                    Suljettu
-                {% endif %}
-            </span>
-        </div>
-
-        <div class="muted" style="line-height:1.9; font-size:17px;">
+        <div class="compact-meta">
             {% if project.location %}
-                <div>📍 {{ project.location }}</div>
+                <span>📍 {{ project.location }}</span> ·
             {% endif %}
 
             {% if project.deadline %}
-                <div>⏳ Deadline: {{ project.deadline }}</div>
+                <span>🏗️ Rakennusaika: {{ project.deadline }}</span>
             {% endif %}
         </div>
     </div>
 
-    <a href="{{ url_for('contractor_projects') }}" class="btn">
+    <a href="{{ url_for('contractor_projects') }}" class="btn btn-small">
         ← Takaisin projekteihin
     </a>
 </div>
 
 {% if project.description %}
-    <div class="card" style="margin-bottom:42px;">
-        <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:18px;">
+    <div class="card compact-card" style="margin-bottom:24px;">
+        <h2 style="font-size:24px; margin-bottom:12px;">
             Projektin kuvaus
         </h2>
 
-        <p class="muted" style="line-height:1.9; white-space:pre-line;">
+        <p class="muted" style="line-height:1.8; white-space:pre-line;">
             {{ project.description }}
         </p>
     </div>
 {% endif %}
 
-<div
-    style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        gap:20px;
-        flex-wrap:wrap;
-        margin-bottom:28px;
-    "
->
-    <div>
-        <h2 class="section-title" style="margin-bottom:8px;">
-            Urakkaosat
-        </h2>
+<div style="margin-bottom:22px;">
+    <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:6px;">
+        Urakkaosat / litterat
+    </h2>
 
-        <p class="muted">
-            Tarkastele urakkaosia, lataa piirustuksia ja jätä tarjous.
-        </p>
-    </div>
+    <p class="muted">
+        Avaa urakkaosa nähdäksesi piirustukset ja jättääksesi tarjouksen.
+    </p>
 </div>
 
 {% if sections %}
-
-    <div class="grid">
+    <div class="compact-list">
         {% for section in sections %}
-            <div class="card section-card">
-
-                <div
-                    style="
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:flex-start;
-                        gap:18px;
-                        margin-bottom:20px;
-                        flex-wrap:wrap;
-                    "
-                >
-                    <div>
+            <div class="card compact-card">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:260px;">
                         <h3>{{ section.title }}</h3>
 
-                        <div class="section-meta">
+                        <div class="compact-meta">
                             {% if section.Littera %}
-                                <div>🏗️ {{ section.Littera }}</div>
+                                <span>🏷️ Littera: {{ section.Littera }}</span> ·
                             {% endif %}
 
                             {% if section.deadline %}
-                                <div>⏳ Deadline: {{ section.deadline }}</div>
+                                <span>🏗️ Rakennusaika: {{ section.deadline }}</span> ·
                             {% endif %}
 
-                            <div>📎 Tiedostoja: {{ section.file_count }}</div>
+                            <span>📎 Tiedostoja: {{ section.file_count }}</span>
+
+                            {% if section.has_my_bid %}
+                                · <span>✅ Tarjous jätetty</span>
+                            {% else %}
+                                · <span>📝 Ei tarjousta vielä</span>
+                            {% endif %}
                         </div>
+
+                        {% if section.description %}
+                            <p class="muted" style="line-height:1.7; margin-top:10px;">
+                                {{ section.description[:180] }}
+                                {% if section.description|length > 180 %}...{% endif %}
+                            </p>
+                        {% endif %}
                     </div>
 
                     <span class="status-pill status-{{ section.status }}">
@@ -142,143 +91,27 @@
                     </span>
                 </div>
 
-                {% if section.description %}
-                    <p class="muted" style="line-height:1.8; margin-bottom:24px;">
-                        {{ section.description }}
-                    </p>
-                {% endif %}
-
-                {% if section.files %}
-                    <div
-                        style="
-                            padding:22px;
-                            border-radius:22px;
-                            background:rgba(255,255,255,0.04);
-                            border:1px solid rgba(255,255,255,0.07);
-                            margin-bottom:24px;
-                        "
+                <div class="compact-actions">
+                    <a
+                        href="{{ url_for('contractor_section_detail', section_id=section.id) }}"
+                        class="btn btn-small"
                     >
-                        <h4
-                            style="
-                                font-size:18px;
-                                margin-bottom:18px;
-                                letter-spacing:-0.03em;
-                            "
-                        >
-                            Piirustukset & dokumentit
-                        </h4>
-
-                        <div class="grid">
-                            {% for file in section.files %}
-                                <div
-                                    style="
-                                        display:flex;
-                                        justify-content:space-between;
-                                        gap:14px;
-                                        align-items:center;
-                                        flex-wrap:wrap;
-                                        padding:16px;
-                                        border-radius:18px;
-                                        background:rgba(255,255,255,0.04);
-                                        border:1px solid rgba(255,255,255,0.05);
-                                    "
-                                >
-                                    <div>
-                                        <div style="font-weight:700; margin-bottom:6px;">
-                                            📎 {{ file.original_filename }}
-                                        </div>
-
-                                        <div class="muted" style="font-size:14px; line-height:1.7;">
-                                            <div>{{ file.file_type }}</div>
-
-                                            {% if file.note %}
-                                                <div>{{ file.note }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-
-                                    <a
-                                        href="{{ url_for('download_section_file', file_id=file.id) }}"
-                                        class="btn btn-small"
-                                    >
-                                        Lataa
-                                    </a>
-                                </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endif %}
-
-                <div
-                    style="
-                        padding:24px;
-                        border-radius:24px;
-                        background:rgba(245,158,11,0.08);
-                        border:1px solid rgba(245,158,11,0.16);
-                    "
-                >
-                    <h4
-                        style="
-                        font-size:24px;
-                        margin-bottom:12px;
-                        letter-spacing:-0.03em;
-                    "
-                >
-                    Tarjous
-                </h4>
-
-                <p class="muted" style="line-height:1.8; margin-bottom:22px;">
-                    Avaa urakkaosa nähdäksesi piirustukset tarkemmin ja jättääksesi
-                    tai päivittääksesi tarjouksen.
-                </p>
-
-                <a
-                    href="{{ url_for('contractor_section_detail', section_id=section.id) }}"
-                    class="btn"
-                >
-                    {% if section.has_my_bid %}
-                        Päivitä tarjous
-                    {% else %}
-                        Avaa ja jätä tarjous
-                    {% endif %}
-                </a>
-            </div>
-
-                        <div class="form-group">
-                            <label>Tarjousliite</label>
-
-                            <input
-                                type="file"
-                                name="attachment"
-                                class="form-control"
-                            >
-                        </div>
-
-                        <button type="submit" class="btn">
-                            Lähetä tarjous
-                        </button>
-
-                    </form>
+                        {% if section.has_my_bid %}
+                            Avaa / päivitä tarjous
+                        {% else %}
+                            Avaa urakkaosa
+                        {% endif %}
+                    </a>
                 </div>
-
             </div>
         {% endfor %}
     </div>
-
 {% else %}
-
     <div class="card">
         <div class="empty-state">
-            <h2 style="margin-bottom:16px;">
-                Ei urakkaosia vielä
-            </h2>
-
-            <p class="muted">
-                Tähän projektiin ei ole vielä lisätty urakkaosia.
-            </p>
+            Tähän projektiin ei ole vielä lisätty urakkaosia.
         </div>
     </div>
-
 {% endif %}
 
 {% endblock %}
