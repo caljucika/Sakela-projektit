@@ -1297,18 +1297,28 @@ def contractor_projects():
         FROM projects p
         LEFT JOIN project_sections ps ON ps.project_id = p.id
         LEFT JOIN bids b ON b.section_id = ps.id
-        LEFT JOIN project_invites pi
-            ON pi.project_id = p.id
-            AND pi.contractor_id = ?
         WHERE
             (
                 COALESCE(p.visibility, 'public') = 'public'
-                OR pi.id IS NOT NULL
+                OR EXISTS (
+                    SELECT 1
+                    FROM project_invites pi
+                    WHERE pi.project_id = p.id
+                    AND pi.contractor_id = ?
+                )
             )
             {status_filter}
         GROUP BY p.id
         ORDER BY p.created_at DESC
     """, (user_id,)).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "contractor_projects.html",
+        projects=projects,
+        show_all=show_all,
+    )
 
     conn.close()
 
