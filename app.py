@@ -1175,28 +1175,6 @@ def contractor_projects():
         show_all=show_all,
     )
 
-@app.route("/projects")
-@login_required
-@approved_contractor_required
-def contractor_projects():
-    conn = get_db()
-
-    projects = conn.execute("""
-        SELECT
-            p.*,
-            COUNT(ps.id) AS section_count
-        FROM projects p
-        LEFT JOIN project_sections ps ON ps.project_id = p.id
-        COUNT(DISTINCT b.id) AS bid_count
-        WHERE p.status = 'open'
-        GROUP BY p.id
-        ORDER BY p.created_at DESC
-    """).fetchall()
-
-    conn.close()
-
-    return render_template("contractor_projects.html", projects=projects)
-
 
 @app.route("/projects/<int:project_id>")
 @login_required
