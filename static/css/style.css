@@ -577,3 +577,11 @@ table tr:hover td {
 .compact-card p {
     font-size: 14px;
 }
+select.form-control option {
+    background: #111111;
+    color: #ffffff;
+}
+
+select.form-control {
+    color: #ffffff;
+}
