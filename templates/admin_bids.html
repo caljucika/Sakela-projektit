@@ -4,102 +4,74 @@
 
 {% block content %}
 
-<div style="margin-bottom:42px;">
-    <div
-        style="
-            display:inline-flex;
-            padding:8px 13px;
-            border-radius:999px;
-            background:rgba(245,158,11,0.12);
-            border:1px solid rgba(245,158,11,0.25);
-            color:#fcd34d;
-            font-weight:800;
-            margin-bottom:18px;
-        "
-    >
+<div style="margin-bottom:34px;">
+    <h1 style="font-size:48px; letter-spacing:-0.055em; margin-bottom:12px;">
         Tarjousvertailu
-    </div>
-
-    <h1 style="font-size:56px; letter-spacing:-0.055em; margin-bottom:14px;">
-        Tarjoukset projekteittain
     </h1>
 
-    <p class="muted" style="font-size:18px; line-height:1.8; max-width:860px;">
-        Katso, mihin projekteihin ja urakkaosiin tarjoukset ovat saapuneet.
-        Jokaisen urakkaosan tarjoukset näytetään halvimmasta kalleimpaan.
+    <p class="muted" style="font-size:17px; line-height:1.8; max-width:860px;">
+        Projektit näkyvät isoina kohteina. Avaa projektin litterat ja katso tarjoukset halvimmasta kalleimpaan.
     </p>
 </div>
 
 {% if grouped %}
 
-    <div class="grid">
+    <div class="compact-list">
 
         {% for project_id, project in grouped.items() %}
 
-            <div class="card">
+            <div class="card compact-card">
 
-                <div style="margin-bottom:30px;">
-                    <h2 style="font-size:36px; letter-spacing:-0.045em; margin-bottom:10px;">
-                        {{ project.project_title }}
-                    </h2>
+                <h2 style="font-size:28px; letter-spacing:-0.04em; margin-bottom:8px;">
+                    {{ project.project_title }}
+                </h2>
 
-                    {% if project.project_location %}
-                        <div class="muted">
-                            📍 {{ project.project_location }}
-                        </div>
-                    {% endif %}
-                </div>
+                {% if project.project_location %}
+                    <div class="compact-meta" style="margin-bottom:18px;">
+                        📍 {{ project.project_location }}
+                    </div>
+                {% endif %}
 
-                <div class="grid">
+                <div class="compact-list">
 
                     {% for section_id, section in project.sections.items() %}
 
-                        <div
+                        <details
                             style="
-                                padding:24px;
-                                border-radius:24px;
+                                padding:16px;
+                                border-radius:18px;
                                 background:rgba(255,255,255,0.04);
                                 border:1px solid rgba(255,255,255,0.07);
                             "
+                            {% if loop.first %}open{% endif %}
                         >
-
-                            <div
+                            <summary
                                 style="
+                                    cursor:pointer;
                                     display:flex;
                                     justify-content:space-between;
-                                    align-items:flex-start;
-                                    gap:18px;
+                                    gap:14px;
                                     flex-wrap:wrap;
-                                    margin-bottom:22px;
+                                    align-items:center;
+                                    font-weight:900;
                                 "
                             >
-                                <div>
-                                    <h3 style="font-size:28px; letter-spacing:-0.04em; margin-bottom:8px;">
-                                        {{ section.section_title }}
-                                    </h3>
+                                <span>
+                                    {{ section.section_title }}
 
                                     {% if section.Littera %}
-                                        <div class="muted">
-                                            🏗️ {{ section.Littera }}
-                                        </div>
+                                        <span class="muted" style="font-weight:400;">
+                                            · {{ section.Littera }}
+                                        </span>
                                     {% endif %}
-                                </div>
+                                </span>
 
-                                <div
-                                    style="
-                                        padding:12px 16px;
-                                        border-radius:999px;
-                                        background:rgba(245,158,11,0.12);
-                                        border:1px solid rgba(245,158,11,0.25);
-                                        font-weight:900;
-                                        color:#fcd34d;
-                                    "
-                                >
+                                <span class="status-pill status-submitted">
                                     {{ section.bids|length }} tarjousta
-                                </div>
-                            </div>
+                                </span>
+                            </summary>
 
-                            <div class="table-wrap">
+                            <div class="table-wrap" style="margin-top:18px;">
                                 <table>
                                     <thead>
                                         <tr>
@@ -116,10 +88,12 @@
                                         {% for bid in section.bids %}
                                             <tr>
                                                 <td>
-                                                    {% if loop.index <= 3 %}
-                                                        <strong style="color:#f59e0b;">
-                                                            {{ loop.index }}.
-                                                        </strong>
+                                                    {% if loop.index == 1 %}
+                                                        🥇
+                                                    {% elif loop.index == 2 %}
+                                                        🥈
+                                                    {% elif loop.index == 3 %}
+                                                        🥉
                                                     {% else %}
                                                         {{ loop.index }}.
                                                     {% endif %}
@@ -128,7 +102,7 @@
                                                 <td>
                                                     <strong>{{ bid.company_name }}</strong>
 
-                                                    <div class="muted" style="margin-top:6px; line-height:1.6;">
+                                                    <div class="muted" style="font-size:13px; margin-top:5px; line-height:1.5;">
                                                         {{ bid.contractor_name }}<br>
                                                         {{ bid.email }}
 
@@ -139,18 +113,18 @@
                                                 </td>
 
                                                 <td>
-                                                    <strong style="color:#f59e0b; font-size:22px;">
+                                                    <strong style="color:#f59e0b; font-size:19px;">
                                                         {{ bid.price }}
                                                     </strong>
 
                                                     {% if loop.index == 1 %}
-                                                        <div style="margin-top:8px;">
+                                                        <div style="margin-top:6px;">
                                                             <span class="status-pill status-approved">
                                                                 Halvin
                                                             </span>
                                                         </div>
                                                     {% elif loop.index <= 3 %}
-                                                        <div style="margin-top:8px;">
+                                                        <div style="margin-top:6px;">
                                                             <span class="status-pill status-reviewing">
                                                                 Top 3
                                                             </span>
@@ -179,12 +153,12 @@
                                                 </td>
 
                                                 <td>
-                                                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
                                                         <a
                                                             href="{{ url_for('admin_section_detail', section_id=bid.section_id) }}"
                                                             class="btn btn-small"
                                                         >
-                                                            Avaa urakkaosa
+                                                            Avaa
                                                         </a>
 
                                                         {% if bid.attachment_stored_filename %}
@@ -202,8 +176,7 @@
                                     </tbody>
                                 </table>
                             </div>
-
-                        </div>
+                        </details>
 
                     {% endfor %}
 
@@ -219,13 +192,7 @@
 
     <div class="card">
         <div class="empty-state">
-            <h2 style="margin-bottom:16px;">
-                Ei tarjouksia vielä
-            </h2>
-
-            <p class="muted">
-                Saapuneet tarjoukset näkyvät täällä projekteittain ja urakkaosittain.
-            </p>
+            Ei tarjouksia vielä.
         </div>
     </div>
 
