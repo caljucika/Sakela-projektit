@@ -4,6 +4,24 @@
 
 {% block content %}
 
+<div style="display:flex; gap:12px; flex-wrap:wrap;">
+
+    <a
+        href="{{ url_for('contractor_projects') }}"
+        class="btn btn-small"
+    >
+        Vain avoimet
+    </a>
+
+    <a
+        href="{{ url_for('contractor_projects', all=1) }}"
+        class="btn btn-small"
+    >
+        Näytä kaikki kohteet
+    </a>
+
+</div>
+
 <div
     style="
         display:flex;
@@ -65,11 +83,12 @@
                                 <div>📍 {{ project.location }}</div>
                             {% endif %}
 
-                            {% if project.deadline %}
-                                <div>⏳ Deadline: {{ project.deadline }}</div>
+                            {% if project.Rakennusaika %}
+                                <div>⏳ Rakennusaika: {{ project.Rakennusaika }}</div>
                             {% endif %}
 
                             <div>📦 Urakkaosia: {{ project.section_count }}</div>
+                            <div>💰 Tarjouksia jätetty: {{ project.bid_count }}</div>
                         </div>
                     </div>
 

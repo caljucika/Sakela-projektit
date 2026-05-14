@@ -118,7 +118,7 @@ def init_db():
             project_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             description TEXT,
-            trade_category TEXT,
+            Littera TEXT,
             deadline TEXT,
             status TEXT NOT NULL DEFAULT 'open',
             created_at TEXT NOT NULL,
@@ -758,7 +758,7 @@ def new_section(project_id):
 
     if request.method == "POST":
         title = request.form.get("title", "").strip()
-        trade_category = request.form.get("trade_category", "").strip()
+        Littera = request.form.get("Littera", "").strip()
         description = request.form.get("description", "").strip()
         deadline = request.form.get("deadline", "").strip()
         status = request.form.get("status", "open")
@@ -770,7 +770,7 @@ def new_section(project_id):
 
         conn.execute("""
             INSERT INTO project_sections (
-                project_id, title, description, trade_category,
+                project_id, title, description, Littera,
                 deadline, status, created_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -778,7 +778,7 @@ def new_section(project_id):
             project_id,
             title,
             description,
-            trade_category,
+            Littera,
             deadline,
             status,
             now_str(),
@@ -821,7 +821,7 @@ def edit_section(section_id):
 
     if request.method == "POST":
         title = request.form.get("title", "").strip()
-        trade_category = request.form.get("trade_category", "").strip()
+        Littera = request.form.get("Littera", "").strip()
         description = request.form.get("description", "").strip()
         deadline = request.form.get("deadline", "").strip()
         status = request.form.get("status", "open")
@@ -833,12 +833,12 @@ def edit_section(section_id):
 
         conn.execute("""
             UPDATE project_sections
-            SET title = ?, description = ?, trade_category = ?, deadline = ?, status = ?
+            SET title = ?, description = ?, Littera = ?, deadline = ?, status = ?
             WHERE id = ?
         """, (
             title,
             description,
-            trade_category,
+            Littera,
             deadline,
             status,
             section_id,
@@ -1084,7 +1084,7 @@ def admin_bids():
             u.phone,
             ps.id AS section_id,
             ps.title AS section_title,
-            ps.trade_category,
+            ps.Littera,
             p.id AS project_id,
             p.title AS project_title,
             p.location AS project_location
@@ -1113,7 +1113,7 @@ def admin_bids():
         if section_id not in grouped[project_id]["sections"]:
             grouped[project_id]["sections"][section_id] = {
                 "section_title": bid["section_title"],
-                "trade_category": bid["trade_category"],
+                "Littera": bid["Littera"],
                 "bids": []
             }
 
@@ -1131,42 +1131,55 @@ def admin_bids():
         grouped=grouped,
     )
 
-@app.route("/contractor")
+@app.route("/contractor/projects")
 @login_required
-@approved_contractor_required
-def contractor_dashboard():
+def contractor_projects():
+    if session.get("role") != "contractor":
+        flash("Pääsy estetty.", "danger")
+        return redirect(url_for("index"))
+
+    show_all = request.args.get("all")
+
     conn = get_db()
 
-    projects = conn.execute("""
-        SELECT
-            p.*,
-            COUNT(ps.id) AS section_count
-        FROM projects p
-        LEFT JOIN project_sections ps ON ps.project_id = p.id
-        WHERE p.status = 'open'
-        GROUP BY p.id
-        ORDER BY p.created_at DESC
-    """).fetchall()
-
-    my_bids = conn.execute("""
-        SELECT
-            b.*,
-            ps.title AS section_title,
-            p.title AS project_title
-        FROM bids b
-        JOIN project_sections ps ON ps.id = b.section_id
-        JOIN projects p ON p.id = ps.project_id
-        WHERE b.contractor_id = ?
-        ORDER BY b.created_at DESC
-        LIMIT 5
-    """, (session["user_id"],)).fetchall()
+    if show_all:
+        projects = conn.execute("""
+            SELECT
+                p.*,
+                COUNT(DISTINCT ps.id) AS section_count,
+                COUNT(DISTINCT b.id) AS bid_count,
+                MAX(b.created_at) AS latest_bid_at
+            FROM projects p
+            LEFT JOIN project_sections ps
+                ON ps.project_id = p.id
+            LEFT JOIN bids b
+                ON b.section_id = ps.id
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+        """).fetchall()
+    else:
+        projects = conn.execute("""
+            SELECT
+                p.*,
+                COUNT(DISTINCT ps.id) AS section_count,
+                COUNT(DISTINCT b.id) AS bid_count,
+                MAX(b.created_at) AS latest_bid_at
+            FROM projects p
+            LEFT JOIN project_sections ps
+                ON ps.project_id = p.id
+            LEFT JOIN bids b
+                ON b.section_id = ps.id
+            WHERE p.status = 'open'
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+        """).fetchall()
 
     conn.close()
 
     return render_template(
-        "contractor_dashboard.html",
+        "contractor_projects.html",
         projects=projects,
-        my_bids=my_bids,
+        show_all=show_all,
     )
 
 
