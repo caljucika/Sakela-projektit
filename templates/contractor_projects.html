@@ -4,6 +4,18 @@
 
 {% block content %}
 
+<div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:30px;">
+
+    <a href="{{ url_for('contractor_projects') }}" class="btn btn-small">
+        Vain avoimet
+    </a>
+
+    <a href="{{ url_for('contractor_projects', all=1) }}" class="btn btn-small">
+        Näytä kaikki kohteet
+    </a>
+
+</div>
+
 <div style="display:flex; gap:12px; flex-wrap:wrap;">
 
     <a

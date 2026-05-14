@@ -1131,13 +1131,10 @@ def admin_bids():
         grouped=grouped,
     )
 
-@app.route("/contractor/projects")
+@app.route("/projects")
 @login_required
+@approved_contractor_required
 def contractor_projects():
-    if session.get("role") != "contractor":
-        flash("Pääsy estetty.", "danger")
-        return redirect(url_for("index"))
-
     show_all = request.args.get("all")
 
     conn = get_db()
@@ -1150,10 +1147,8 @@ def contractor_projects():
                 COUNT(DISTINCT b.id) AS bid_count,
                 MAX(b.created_at) AS latest_bid_at
             FROM projects p
-            LEFT JOIN project_sections ps
-                ON ps.project_id = p.id
-            LEFT JOIN bids b
-                ON b.section_id = ps.id
+            LEFT JOIN project_sections ps ON ps.project_id = p.id
+            LEFT JOIN bids b ON b.section_id = ps.id
             GROUP BY p.id
             ORDER BY p.created_at DESC
         """).fetchall()
@@ -1165,10 +1160,8 @@ def contractor_projects():
                 COUNT(DISTINCT b.id) AS bid_count,
                 MAX(b.created_at) AS latest_bid_at
             FROM projects p
-            LEFT JOIN project_sections ps
-                ON ps.project_id = p.id
-            LEFT JOIN bids b
-                ON b.section_id = ps.id
+            LEFT JOIN project_sections ps ON ps.project_id = p.id
+            LEFT JOIN bids b ON b.section_id = ps.id
             WHERE p.status = 'open'
             GROUP BY p.id
             ORDER BY p.created_at DESC
@@ -1181,7 +1174,6 @@ def contractor_projects():
         projects=projects,
         show_all=show_all,
     )
-
 
 @app.route("/projects")
 @login_required
