@@ -1,159 +1,46 @@
-{% extends "base.html" %}
+@app.route("/projects")
+@login_required
+@approved_contractor_required
+def contractor_projects():
+    show_all = request.args.get("all")
 
-{% block title %}Avoimet projektit{% endblock %}
+    conn = get_db()
 
-{% block content %}
+    base_where = ""
+    if not show_all:
+        base_where = "WHERE p.status = 'open'"
 
-<div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:30px;">
+    projects = conn.execute(f"""
+        SELECT
+            p.id,
+            p.title,
+            p.location,
+            p.description,
+            p.deadline,
+            p.status,
+            p.created_at,
+            COUNT(DISTINCT ps.id) AS section_count,
+            COUNT(DISTINCT b.id) AS bid_count,
+            MAX(b.created_at) AS latest_bid_at
+        FROM projects p
+        LEFT JOIN project_sections ps ON ps.project_id = p.id
+        LEFT JOIN bids b ON b.section_id = ps.id
+        {base_where}
+        GROUP BY
+            p.id,
+            p.title,
+            p.location,
+            p.description,
+            p.deadline,
+            p.status,
+            p.created_at
+        ORDER BY p.created_at DESC
+    """).fetchall()
 
-    <a href="{{ url_for('contractor_projects') }}" class="btn btn-small">
-        Vain avoimet
-    </a>
+    conn.close()
 
-    <a href="{{ url_for('contractor_projects', all=1) }}" class="btn btn-small">
-        Näytä kaikki kohteet
-    </a>
-
-</div>
-
-<div style="display:flex; gap:12px; flex-wrap:wrap;">
-
-    <a
-        href="{{ url_for('contractor_projects') }}"
-        class="btn btn-small"
-    >
-        Vain avoimet
-    </a>
-
-    <a
-        href="{{ url_for('contractor_projects', all=1) }}"
-        class="btn btn-small"
-    >
-        Näytä kaikki kohteet
-    </a>
-
-</div>
-
-<div
-    style="
-        display:flex;
-        justify-content:space-between;
-        align-items:flex-start;
-        gap:24px;
-        flex-wrap:wrap;
-        margin-bottom:42px;
-    "
->
-    <div>
-        <div
-            style="
-                display:inline-flex;
-                padding:8px 13px;
-                border-radius:999px;
-                background:rgba(245,158,11,0.12);
-                border:1px solid rgba(245,158,11,0.25);
-                color:#fcd34d;
-                font-weight:800;
-                margin-bottom:18px;
-            "
-        >
-            Avoimet tarjouskohteet
-        </div>
-
-        <h1 style="font-size:56px; letter-spacing:-0.055em; margin-bottom:14px;">
-            Avoimet projektit
-        </h1>
-
-        <p class="muted" style="font-size:18px; line-height:1.8; max-width:860px;">
-            Selaa avoimia rakennusprojekteja, tarkastele urakkaosia,
-            lataa piirustuksia ja jätä tarjouksia suoraan portaalissa.
-        </p>
-    </div>
-</div>
-
-{% if projects %}
-
-    <div class="grid grid-2">
-        {% for project in projects %}
-            <div class="card project-card">
-
-                <div
-                    style="
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:flex-start;
-                        gap:18px;
-                        margin-bottom:20px;
-                        flex-wrap:wrap;
-                    "
-                >
-                    <div>
-                        <h3>{{ project.title }}</h3>
-
-                        <div class="project-meta">
-                            {% if project.location %}
-                                <div>📍 {{ project.location }}</div>
-                            {% endif %}
-
-                            {% if project.Rakennusaika %}
-                                <div>⏳ Rakennusaika: {{ project.Rakennusaika }}</div>
-                            {% endif %}
-
-                            <div>📦 Urakkaosia: {{ project.section_count }}</div>
-                            <div>💰 Tarjouksia jätetty: {{ project.bid_count }}</div>
-                        </div>
-                    </div>
-
-                    <span class="status-pill status-{{ project.status }}">
-                        {% if project.status == "open" %}
-                            Avoin
-                        {% else %}
-                            Suljettu
-                        {% endif %}
-                    </span>
-                </div>
-
-                {% if project.description %}
-                    <p class="muted" style="line-height:1.8;">
-                        {{ project.description[:260] }}
-
-                        {% if project.description|length > 260 %}
-                            ...
-                        {% endif %}
-                    </p>
-                {% else %}
-                    <p class="muted" style="line-height:1.8;">
-                        Ei kuvausta.
-                    </p>
-                {% endif %}
-
-                <div class="project-actions">
-                    <a
-                        href="{{ url_for('contractor_project_detail', project_id=project.id) }}"
-                        class="btn btn-small"
-                    >
-                        Tarkastele kohdetta
-                    </a>
-                </div>
-
-            </div>
-        {% endfor %}
-    </div>
-
-{% else %}
-
-    <div class="card">
-        <div class="empty-state">
-            <h2 style="margin-bottom:16px;">
-                Ei avoimia projekteja
-            </h2>
-
-            <p class="muted">
-                Tällä hetkellä ei ole avoimia tarjouskohteita.
-            </p>
-        </div>
-    </div>
-
-{% endif %}
-
-{% endblock %}
+    return render_template(
+        "contractor_projects.html",
+        projects=projects,
+        show_all=show_all,
+    )
