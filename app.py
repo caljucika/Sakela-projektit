@@ -1,5 +1,7 @@
 import os
 import sqlite3
+import smtplib
+from email.message import EmailMessage
 from datetime import datetime
 from functools import wraps
 
@@ -69,6 +71,33 @@ def safe_remove_file(stored_filename):
 
     if os.path.exists(path):
         os.remove(path)
+
+def send_email(to_email, subject, body, reply_to=None):
+    smtp_host = os.environ.get("SMTP_HOST")
+    smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+    smtp_user = os.environ.get("SMTP_USER")
+    smtp_password = os.environ.get("SMTP_PASSWORD")
+    from_email = os.environ.get("FROM_EMAIL", smtp_user)
+
+    if not smtp_host or not smtp_user or not smtp_password or not from_email:
+        return False
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = from_email
+    msg["To"] = to_email
+
+    if reply_to:
+        msg["Reply-To"] = reply_to
+
+    msg.set_content(body)
+
+    with smtplib.SMTP(smtp_host, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+
+    return True
 
 
 def get_db():
@@ -1112,6 +1141,7 @@ def update_bid_status(bid_id):
 @admin_required
 def invite_contractors_to_project(project_id):
     littera = request.form.get("littera", "").strip()
+    message = request.form.get("message", "").strip()
 
     conn = get_db()
 
@@ -1157,7 +1187,44 @@ def invite_contractors_to_project(project_id):
                 contractor["id"],
                 now_str(),
             ))
+
             invited_count += 1
+
+            project_link = request.host_url.rstrip("/") + url_for(
+                "contractor_project_detail",
+                project_id=project_id
+            )
+
+            email_subject = f"Kutsu projektiin: {project['title']}"
+
+            email_body = f"""
+Hei {contractor['name']},
+
+Sinut on kutsuttu Sakela-portaalin projektiin:
+
+{project['title']}
+
+Sijainti:
+{project['location'] or '-'}
+
+{f'Työnjohdon viesti:\\n{message}\\n' if message else ''}
+
+Avaa projekti tästä:
+{project_link}
+
+Terveisin,
+Sakela
+"""
+
+            try:
+                send_email(
+                    contractor["email"],
+                    email_subject,
+                    email_body,
+                )
+            except Exception as e:
+                print("EMAIL ERROR:", e)
+
         except sqlite3.IntegrityError:
             pass
 
@@ -1165,9 +1232,9 @@ def invite_contractors_to_project(project_id):
     conn.close()
 
     if littera:
-        flash(f"Kutsuttu {invited_count} urakoitsijaa litteralla: {littera}.", "success")
+        flash(f"Kutsuttu {invited_count} urakoitsijaa litteralla: {littera}. Sähköpostilähetys lisätään seuraavassa vaiheessa.", "success")
     else:
-        flash(f"Kutsuttu {invited_count} urakoitsijaa projektiin.", "success")
+        flash(f"Kutsuttu {invited_count} urakoitsijaa projektiin. Sähköpostilähetys lisätään seuraavassa vaiheessa.", "success")
 
     return redirect(url_for("admin_project_detail", project_id=project_id))
 
