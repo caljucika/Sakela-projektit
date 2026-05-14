@@ -546,3 +546,34 @@ table tr:hover td {
         padding: 14px 12px;
     }
 }
+.compact-list {
+    display: grid;
+    gap: 14px;
+}
+
+.compact-card {
+    padding: 18px;
+    border-radius: 20px;
+}
+
+.compact-card h3 {
+    font-size: 21px;
+    margin-bottom: 8px;
+}
+
+.compact-meta {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.compact-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.compact-card p {
+    font-size: 14px;
+}
