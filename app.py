@@ -174,6 +174,15 @@ def init_db():
 
     if not column_exists(conn, "users", "contractor_litteras"):
         cur.execute("ALTER TABLE users ADD COLUMN contractor_litteras TEXT")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS project_invites (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL,
+                contractor_id INTEGER NOT NULL,
+                invited_at TEXT NOT NULL,
+                UNIQUE(project_id, contractor_id)
+            )
+        """)
 
     conn.commit()
 
@@ -1098,6 +1107,70 @@ def update_bid_status(bid_id):
     flash("Tarjouksen status päivitetty.", "success")
     return redirect(url_for("admin_section_detail", section_id=bid["section_id"]))
 
+@app.route("/admin/projects/<int:project_id>/invite", methods=["POST"])
+@login_required
+@admin_required
+def invite_contractors_to_project(project_id):
+    littera = request.form.get("littera", "").strip()
+
+    conn = get_db()
+
+    project = conn.execute(
+        "SELECT * FROM projects WHERE id = ?",
+        (project_id,)
+    ).fetchone()
+
+    if not project:
+        conn.close()
+        flash("Projektia ei löytynyt.", "danger")
+        return redirect(url_for("admin_projects"))
+
+    if littera:
+        contractors = conn.execute("""
+            SELECT *
+            FROM users
+            WHERE role = 'contractor'
+            AND contractor_status = 'approved'
+            AND contractor_litteras LIKE ?
+        """, (f"%{littera}%",)).fetchall()
+    else:
+        contractors = conn.execute("""
+            SELECT *
+            FROM users
+            WHERE role = 'contractor'
+            AND contractor_status = 'approved'
+        """).fetchall()
+
+    invited_count = 0
+
+    for contractor in contractors:
+        try:
+            conn.execute("""
+                INSERT INTO project_invites (
+                    project_id,
+                    contractor_id,
+                    invited_at
+                )
+                VALUES (?, ?, ?)
+            """, (
+                project_id,
+                contractor["id"],
+                now_str(),
+            ))
+            invited_count += 1
+        except sqlite3.IntegrityError:
+            pass
+
+    conn.commit()
+    conn.close()
+
+    if littera:
+        flash(f"Kutsuttu {invited_count} urakoitsijaa litteralla: {littera}.", "success")
+    else:
+        flash(f"Kutsuttu {invited_count} urakoitsijaa projektiin.", "success")
+
+    return redirect(url_for("admin_project_detail", project_id=project_id))
+
 @app.route("/admin/bids")
 @login_required
 @admin_required
@@ -1207,38 +1280,43 @@ def contractor_dashboard():
 @approved_contractor_required
 def contractor_projects():
     show_all = request.args.get("all")
+    user_id = session["user_id"]
 
     conn = get_db()
 
-    if show_all:
-        projects = conn.execute("""
-            SELECT
-                p.*,
-                COUNT(DISTINCT ps.id) AS section_count,
-                COUNT(DISTINCT b.id) AS bid_count,
-                MAX(b.created_at) AS latest_bid_at
-            FROM projects p
-            LEFT JOIN project_sections ps ON ps.project_id = p.id
-            LEFT JOIN bids b ON b.section_id = ps.id
-            WHERE COALESCE(p.visibility, 'public') = 'public'
-            GROUP BY p.id
-            ORDER BY p.created_at DESC
-        """).fetchall()
-    else:
-        projects = conn.execute("""
-            SELECT
-                p.*,
-                COUNT(DISTINCT ps.id) AS section_count,
-                COUNT(DISTINCT b.id) AS bid_count,
-                MAX(b.created_at) AS latest_bid_at
-            FROM projects p
-            LEFT JOIN project_sections ps ON ps.project_id = p.id
-            LEFT JOIN bids b ON b.section_id = ps.id
-            WHERE p.status = 'open'
-            AND COALESCE(p.visibility, 'public') = 'public'
-            GROUP BY p.id
-            ORDER BY p.created_at DESC
-        """).fetchall()
+    status_filter = ""
+    if not show_all:
+        status_filter = "AND p.status = 'open'"
+
+    projects = conn.execute(f"""
+        SELECT
+            p.*,
+            COUNT(DISTINCT ps.id) AS section_count,
+            COUNT(DISTINCT b.id) AS bid_count,
+            MAX(b.created_at) AS latest_bid_at
+        FROM projects p
+        LEFT JOIN project_sections ps ON ps.project_id = p.id
+        LEFT JOIN bids b ON b.section_id = ps.id
+        LEFT JOIN project_invites pi
+            ON pi.project_id = p.id
+            AND pi.contractor_id = ?
+        WHERE
+            (
+                COALESCE(p.visibility, 'public') = 'public'
+                OR pi.id IS NOT NULL
+            )
+            {status_filter}
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
+    """, (user_id,)).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "contractor_projects.html",
+        projects=projects,
+        show_all=show_all,
+    )
 
     conn.close()
 
@@ -1256,12 +1334,19 @@ def contractor_project_detail(project_id):
     conn = get_db()
 
     project = conn.execute("""
-        SELECT *
-        FROM projects
-        WHERE id = ?
-        AND status = 'open'
-        AND COALESCE(visibility, 'public') = 'public'
-    """, (project_id,)).fetchone()
+        SELECT
+            p.*
+        FROM projects p
+        LEFT JOIN project_invites pi
+            ON pi.project_id = p.id
+            AND pi.contractor_id = ?
+        WHERE p.id = ?
+        AND p.status = 'open'
+        AND (
+            COALESCE(p.visibility, 'public') = 'public'
+            OR pi.id IS NOT NULL
+        )
+    """, (session["user_id"], project_id)).fetchone()
 
     if not project:
         conn.close()

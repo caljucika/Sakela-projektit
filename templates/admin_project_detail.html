@@ -46,6 +46,44 @@
     </div>
 {% endif %}
 
+<div class="card compact-card" style="margin-bottom:24px;">
+    <h2 style="font-size:24px; margin-bottom:12px;">
+        Kutsu urakoitsijoita
+    </h2>
+
+    <p class="muted" style="line-height:1.8; margin-bottom:18px;">
+        Kutsu hyväksyttyjä urakoitsijoita tähän projektiin. Jos projekti on salainen,
+        vain kutsutut urakoitsijat näkevät sen.
+    </p>
+
+    <form
+        method="POST"
+        action="{{ url_for('invite_contractors_to_project', project_id=project.id) }}"
+    >
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+            <select name="littera" class="form-control" style="max-width:320px;">
+                <option value="">Kaikki hyväksytyt urakoitsijat</option>
+                <option value="Maanrakennus">Maanrakennus</option>
+                <option value="Sähkö">Sähkö</option>
+                <option value="LVI">LVI</option>
+                <option value="Betoni">Betoni</option>
+                <option value="Purku">Purku</option>
+                <option value="Maalaus">Maalaus</option>
+                <option value="Kalusteet">Kalusteet</option>
+                <option value="Pihatyöt">Pihatyöt</option>
+                <option value="Katto">Katto</option>
+                <option value="Julkisivu">Julkisivu</option>
+                <option value="Sisätyöt">Sisätyöt</option>
+                <option value="Muut työt">Muut työt</option>
+            </select>
+
+            <button type="submit" class="btn btn-small">
+                Kutsu projektiin
+            </button>
+        </div>
+    </form>
+</div>
+
 <div style="display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:22px;">
     <div>
         <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:6px;">
