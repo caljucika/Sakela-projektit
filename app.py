@@ -1318,32 +1318,26 @@ def contractor_dashboard():
     conn = get_db()
 
     projects = conn.execute("""
-        SELECT
-            p.*,
-            COUNT(DISTINCT ps.id) AS section_count,
-            COUNT(DISTINCT b.id) AS bid_count,
-            MAX(b.created_at) AS latest_bid_at
-        FROM projects p
-        LEFT JOIN project_sections ps ON ps.project_id = p.id
-        LEFT JOIN bids b ON b.section_id = ps.id
-        WHERE p.status = 'open'
-        GROUP BY p.id
-        ORDER BY p.created_at DESC
-        LIMIT 5
-    """).fetchall()
-
-    my_bids = conn.execute("""
-        SELECT
-            b.*,
-            ps.title AS section_title,
-            p.title AS project_title
-        FROM bids b
-        JOIN project_sections ps ON ps.id = b.section_id
-        JOIN projects p ON p.id = ps.project_id
-        WHERE b.contractor_id = ?
-        ORDER BY b.created_at DESC
-        LIMIT 5
-    """, (session["user_id"],)).fetchall()
+    SELECT
+        p.*,
+        COUNT(DISTINCT ps.id) AS section_count,
+        COUNT(DISTINCT b.id) AS bid_count,
+        MAX(b.created_at) AS latest_bid_at
+    FROM projects p
+    LEFT JOIN project_sections ps ON ps.project_id = p.id
+    LEFT JOIN bids b ON b.section_id = ps.id
+    LEFT JOIN project_invites pi
+        ON pi.project_id = p.id
+        AND pi.contractor_id = ?
+    WHERE p.status = 'open'
+    AND (
+        COALESCE(p.visibility, 'public') = 'public'
+        OR pi.id IS NOT NULL
+    )
+    GROUP BY p.id
+    ORDER BY p.created_at DESC
+    LIMIT 5
+""", (session["user_id"],)).fetchall()
 
     conn.close()
 
