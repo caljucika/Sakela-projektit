@@ -1338,6 +1338,19 @@ def contractor_dashboard():
     ORDER BY p.created_at DESC
     LIMIT 5
 """, (session["user_id"],)).fetchall()
+    
+    my_bids = conn.execute("""
+        SELECT
+            b.*,
+            ps.title AS section_title,
+            p.title AS project_title
+        FROM bids b
+        JOIN project_sections ps ON ps.id = b.section_id
+        JOIN projects p ON p.id = ps.project_id
+        WHERE b.contractor_id = ?
+        ORDER BY b.created_at DESC
+        LIMIT 5
+    """, (session["user_id"],)).fetchall()
 
     conn.close()
 
