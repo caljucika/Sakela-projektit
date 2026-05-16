@@ -1483,45 +1483,6 @@ def create_r2_backup():
     return redirect(url_for("admin_dashboard"))
 
 
-@app.route("/admin/backup/r2", methods=["POST"])
-@login_required
-@admin_required
-def create_r2_backup():
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    backup_filename = f"sakela_backup_{timestamp}.zip"
-
-    try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            backup_path = os.path.join(tmpdir, backup_filename)
-
-            with zipfile.ZipFile(backup_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-                if os.path.exists(DATABASE):
-                    zipf.write(DATABASE, "sakela_portal.db")
-
-                if os.path.exists(UPLOAD_FOLDER):
-                    for root, dirs, files in os.walk(UPLOAD_FOLDER):
-                        for file in files:
-                            file_path = os.path.join(root, file)
-                            arcname = os.path.relpath(file_path, DATA_DIR)
-                            zipf.write(file_path, arcname)
-
-            uploaded = upload_backup_to_r2(
-                backup_path,
-                f"manual/{backup_filename}"
-            )
-
-            if uploaded:
-                flash("Backup luotu ja lähetetty Cloudflare R2:een.", "success")
-            else:
-                flash("Backup luotiin, mutta R2-asetukset puuttuvat.", "warning")
-
-    except Exception as e:
-        print("BACKUP ERROR:", e)
-        flash(f"Backup epäonnistui: {e}", "danger")
-
-    return redirect(url_for("admin_dashboard"))
-
-
 @app.route("/admin/bids")
 @login_required
 @staff_required
