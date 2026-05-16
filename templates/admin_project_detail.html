@@ -47,48 +47,30 @@
 {% endif %}
 
 <div class="card compact-card" style="margin-bottom:24px;">
-    <h2 style="font-size:24px; margin-bottom:12px;">
-        Kutsu urakoitsijoita
-    </h2>
-
-    <p class="muted" style="line-height:1.8; margin-bottom:18px;">
-        Kutsu hyväksyttyjä urakoitsijoita tähän projektiin. Jos projekti on salainen,
-        vain kutsutut urakoitsijat näkevät sen.
-    </p>
-
-    <form
-        method="POST"
-        action="{{ url_for('invite_contractors_to_project', project_id=project.id) }}"
+    <div
+        style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:20px;
+            flex-wrap:wrap;
+        "
     >
-        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-            <select name="littera" class="form-control" style="max-width:320px;">
-                <option value="">Kaikki hyväksytyt urakoitsijat</option>
-                <option value="Maanrakennus">Maanrakennus</option>
-                <option value="Sähkö">Sähkö</option>
-                <option value="LVI">LVI</option>
-                <option value="Betoni">Betoni</option>
-                <option value="Purku">Purku</option>
-                <option value="Maalaus">Maalaus</option>
-                <option value="Kalusteet">Kalusteet</option>
-                <option value="Pihatyöt">Pihatyöt</option>
-                <option value="Katto">Katto</option>
-                <option value="Julkisivu">Julkisivu</option>
-                <option value="Sisätyöt">Sisätyöt</option>
-                <option value="Muut työt">Muut työt</option>
-            </select>
-            <input
-                type="text"
-                name="message"
-                class="form-control"
-                placeholder="Lisäviesti urakoitsijoille..."
-                style="flex:1; min-width:260px;"
-            >
+        <div>
+            <h2 style="font-size:24px; margin-bottom:10px;">
+                Urakoitsijakutsut siirretty litteroihin
+            </h2>
 
-            <button type="submit" class="btn btn-small">
-                Kutsu projektiin
-            </button>
+            <p class="muted" style="line-height:1.8;">
+                Urakoitsijat kutsutaan nyt suoraan yksittäiseen litteraan,
+                jotta tarjouspyyntö kohdistuu oikeaan urakkaosaan.
+            </p>
         </div>
-    </form>
+
+        <span class="status-pill status-reviewing">
+            Uusi toimintamalli
+        </span>
+    </div>
 </div>
 
 <div style="display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:22px;">

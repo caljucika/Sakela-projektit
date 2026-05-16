@@ -50,6 +50,71 @@
     </div>
 {% endif %}
 
+<div class="card" style="margin-bottom:42px;">
+    <div
+        style="
+            display:flex;
+            justify-content:space-between;
+            align-items:flex-start;
+            gap:24px;
+            flex-wrap:wrap;
+            margin-bottom:24px;
+        "
+    >
+        <div>
+            <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:10px;">
+                Kutsu urakoitsijoita tähän litteraan
+            </h2>
+
+            <p class="muted" style="line-height:1.8; max-width:760px;">
+                Kutsutut urakoitsijat saavat sähköpostin ja näkevät tämän
+                tarjouskohteen omassa näkymässään.
+            </p>
+        </div>
+
+        <span class="status-pill status-reviewing">
+            {{ section.Littera or "Littera" }}
+        </span>
+    </div>
+
+    <form
+        method="POST"
+        action="{{ url_for('invite_contractors_to_project', project_id=section.project_id) }}"
+    >
+        <input
+            type="hidden"
+            name="section_id"
+            value="{{ section.id }}"
+        >
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+
+            <select
+                name="littera"
+                class="form-control"
+                style="max-width:320px;"
+            >
+                <option value="{{ section.Littera }}">
+                    {{ section.Littera or "Kaikki urakoitsijat" }}
+                </option>
+            </select>
+
+            <input
+                type="text"
+                name="message"
+                class="form-control"
+                placeholder="Lisäviesti urakoitsijoille..."
+                style="flex:1; min-width:260px;"
+            >
+
+            <button type="submit" class="btn">
+                Kutsu urakoitsijat
+            </button>
+
+        </div>
+    </form>
+</div>
+
 <div class="grid grid-2" style="margin-bottom:50px;">
     <div class="card">
         <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:12px;">
