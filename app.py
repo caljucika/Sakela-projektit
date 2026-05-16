@@ -221,6 +221,8 @@ def init_db():
 
     if not column_exists(conn, "users", "contractor_litteras"):
         cur.execute("ALTER TABLE users ADD COLUMN contractor_litteras TEXT")
+    if not column_exists(conn, "bids", "matches_request"):
+        cur.execute("ALTER TABLE bids ADD COLUMN matches_request TEXT DEFAULT 'yes'")
 
     conn.commit()
 
@@ -1682,6 +1684,7 @@ def contractor_section_detail(section_id):
 
     if request.method == "POST":
         price = request.form.get("price", "").strip()
+        matches_request = request.form.get("matches_request", "yes")
         message = request.form.get("message", "").strip()
         attachment = request.files.get("attachment")
 
@@ -1711,6 +1714,7 @@ def contractor_section_detail(section_id):
                     UPDATE bids
                     SET
                         price = ?,
+                        matches_request = ?,
                         message = ?,
                         attachment_original_filename = ?,
                         attachment_stored_filename = ?,
@@ -1719,6 +1723,7 @@ def contractor_section_detail(section_id):
                     WHERE id = ?
                 """, (
                     price,
+                    matches_request,
                     message,
                     attachment_original_filename,
                     attachment_stored_filename,
@@ -1730,12 +1735,14 @@ def contractor_section_detail(section_id):
                     UPDATE bids
                     SET
                         price = ?,
+                        matches_request = ?,
                         message = ?,
                         status = 'submitted',
                         created_at = ?
                     WHERE id = ?
                 """, (
                     price,
+                    matches_request,
                     message,
                     now_str(),
                     existing_bid["id"],

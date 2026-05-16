@@ -78,7 +78,7 @@
                                             <th>#</th>
                                             <th>Urakoitsija</th>
                                             <th>Tarjous</th>
-                                            <th>Status</th>
+                                            <th>Vastaa tarjouspyyntöä</th>
                                             <th>Päiväys</th>
                                             <th>Toiminnot</th>
                                         </tr>
@@ -133,43 +133,39 @@
                                                 </td>
 
                                                 <td>
-                                                    <span class="status-pill status-{{ bid.status }}">
-                                                        {% if bid.status == "submitted" %}
-                                                            Uusi
-                                                        {% elif bid.status == "reviewing" %}
-                                                            Käsittelyssä
-                                                        {% elif bid.status == "accepted" %}
-                                                            Hyväksytty
-                                                        {% elif bid.status == "rejected" %}
-                                                            Hylätty
-                                                        {% else %}
-                                                            {{ bid.status }}
-                                                        {% endif %}
-                                                    </span>
-                                                </td>
-
-                                                <td>
-                                                    {{ bid.created_at }}
-                                                </td>
-
-                                                <td>
-                                                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                                        <a
-                                                            href="{{ url_for('admin_section_detail', section_id=bid.section_id) }}"
-                                                            class="btn btn-small"
+                                                    {% if bid.matches_request == "no" %}
+                                                        <span
+                                                            style="
+                                                                display:inline-flex;
+                                                                padding:5px 10px;
+                                                                border-radius:999px;
+                                                                background:rgba(239,68,68,0.14);
+                                                                border:1px solid rgba(239,68,68,0.24);
+                                                                color:#fca5a5;
+                                                                font-size:13px;
+                                                                font-weight:700;
+                                                            "
                                                         >
-                                                            Avaa
-                                                        </a>
-
-                                                        {% if bid.attachment_stored_filename %}
-                                                            <a
-                                                                href="{{ url_for('download_bid_attachment', bid_id=bid.id) }}"
-                                                                class="btn btn-small"
-                                                            >
-                                                                Liite
-                                                            </a>
-                                                        {% endif %}
-                                                    </div>
+                                                            Ei
+                                                        </span>
+                                                    {% else %}
+                                                        <span
+                                                            style="
+                                                                display:inline-flex;
+                                                                padding:5px 10px;
+                                                                border-radius:999px;
+                                                                background:rgba(34,197,94,0.14);
+                                                                border:1px solid rgba(34,197,94,0.24);
+                                                                color:#86efac;
+                                                                font-size:13px;
+                                                                font-weight:700;
+                                                            "
+                                                        >
+                                                            Kyllä
+                                                        </span>
+                                                    {% endif %}
+                                                
+                                                
                                                 </td>
                                             </tr>
                                         {% endfor %}

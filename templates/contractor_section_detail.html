@@ -182,7 +182,33 @@
             </div>
 
             <div class="form-group">
-                <label>Lisätiedot</label>
+                <label>Vastaako tarjous tarjouspyyntöä?</label>
+
+                <select name="matches_request" class="form-control">
+                    <option
+                        value="yes"
+                        {% if not existing_bid or existing_bid.matches_request != "no" %}
+                            selected
+                        {% endif %}
+                    >
+                        Kyllä
+                    </option>
+
+                    <option
+                        value="no"
+                        {% if existing_bid and existing_bid.matches_request == "no" %}
+                            selected
+                        {% endif %}
+                    >
+                        Ei
+                    </option>
+                </select>
+            </div>
+
+
+
+            <div class="form-group">
+                <label>Lisätiedot/perustelut</label>
 
                 <textarea
                     name="message"
