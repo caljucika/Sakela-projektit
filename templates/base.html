@@ -11,7 +11,17 @@
 
 <header class="topbar">
 
-    <a href="{{ url_for('index') }}" class="brand">
+    {% if current_user %}
+        {% if current_user.role == "admin" or current_user.role == "manager" %}
+            <a href="{{ url_for('admin_dashboard') }}" class="brand">
+        {% elif current_user.role == "contractor" %}
+            <a href="{{ url_for('contractor_dashboard') }}" class="brand">
+        {% else %}
+            <a href="{{ url_for('index') }}" class="brand">
+        {% endif %}
+    {% else %}
+        <a href="{{ url_for('index') }}" class="brand">
+    {% endif %}
         <span class="brand-mark">S</span>
 
         <span>
@@ -23,12 +33,16 @@
     <nav class="nav">
         {% if current_user %}
 
-            {% if current_user.role == "admin" %}
+            {% if current_user.role == "admin" or current_user.role == "manager" %}
                 <a href="{{ url_for('admin_dashboard') }}">Hallinta</a>
                 <a href="{{ url_for('admin_projects') }}">Projektit</a>
                 <a href="{{ url_for('admin_bids') }}">Tarjoukset</a>
                 <a href="{{ url_for('admin_contractors') }}">Urakoitsijat</a>
-            {% else %}
+
+                {% if current_user.role == "admin" %}
+                    <a href="{{ url_for('new_manager') }}">Työnjohtajat</a>
+                {% endif %}
+            {% elif current_user.role == "contractor" %}
                 <a href="{{ url_for('contractor_dashboard') }}">Etusivu</a>
                 <a href="{{ url_for('contractor_projects') }}">Avoimet kohteet</a>
             {% endif %}
