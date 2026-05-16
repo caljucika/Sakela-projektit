@@ -1,9 +1,9 @@
 import os
 import sqlite3
 import smtplib
-from email.message import EmailMessage
 from datetime import datetime
 from functools import wraps
+from email.message import EmailMessage
 
 from flask import (
     Flask,
@@ -33,6 +33,7 @@ ALLOWED_EXTENSIONS = {
     "dwg", "doc", "docx", "xls", "xlsx", "txt",
 }
 
+os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
@@ -43,11 +44,13 @@ def now_str():
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
 def parse_price_value(price_text):
     if not price_text:
         return 999999999999
 
     cleaned = ""
+
     for char in price_text:
         if char.isdigit() or char in [",", "."]:
             cleaned += char
@@ -58,6 +61,7 @@ def parse_price_value(price_text):
         return float(cleaned)
     except ValueError:
         return 999999999999
+
 
 def make_stored_filename(original_filename):
     safe_name = secure_filename(original_filename)
@@ -74,6 +78,7 @@ def safe_remove_file(stored_filename):
     if os.path.exists(path):
         os.remove(path)
 
+
 def send_email(to_email, subject, body, reply_to=None):
     smtp_host = os.environ.get("SMTP_HOST")
     smtp_port = int(os.environ.get("SMTP_PORT", "587"))
@@ -82,6 +87,7 @@ def send_email(to_email, subject, body, reply_to=None):
     from_email = os.environ.get("FROM_EMAIL", smtp_user)
 
     if not smtp_host or not smtp_user or not smtp_password or not from_email:
+        print("EMAIL SKIPPED: SMTP settings missing")
         return False
 
     msg = EmailMessage()
@@ -188,6 +194,16 @@ def init_db():
         )
     """)
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS project_invites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            contractor_id INTEGER NOT NULL,
+            invited_at TEXT NOT NULL,
+            UNIQUE(project_id, contractor_id)
+        )
+    """)
+
     if not column_exists(conn, "bids", "attachment_original_filename"):
         cur.execute("ALTER TABLE bids ADD COLUMN attachment_original_filename TEXT")
 
@@ -205,15 +221,6 @@ def init_db():
 
     if not column_exists(conn, "users", "contractor_litteras"):
         cur.execute("ALTER TABLE users ADD COLUMN contractor_litteras TEXT")
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS project_invites (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER NOT NULL,
-                contractor_id INTEGER NOT NULL,
-                invited_at TEXT NOT NULL,
-                UNIQUE(project_id, contractor_id)
-            )
-        """)
 
     conn.commit()
 
@@ -233,9 +240,11 @@ def init_db():
                 contractor_status,
                 company_name,
                 phone,
+                business_id,
+                contractor_litteras,
                 created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             "Sakela Admin",
             admin_email,
@@ -243,6 +252,8 @@ def init_db():
             "admin",
             "approved",
             "Sakela",
+            "",
+            "",
             "",
             now_str(),
         ))
@@ -262,6 +273,7 @@ def current_user():
         (session["user_id"],)
     ).fetchone()
     conn.close()
+
     return user
 
 
@@ -271,7 +283,9 @@ def login_required(view_func):
         if "user_id" not in session:
             flash("Kirjaudu ensin sisään.", "warning")
             return redirect(url_for("login"))
+
         return view_func(*args, **kwargs)
+
     return wrapper
 
 
@@ -279,10 +293,31 @@ def admin_required(view_func):
     @wraps(view_func)
     def wrapper(*args, **kwargs):
         user = current_user()
+
         if not user or user["role"] != "admin":
             flash("Sinulla ei ole oikeutta tähän näkymään.", "danger")
             return redirect(url_for("index"))
+
         return view_func(*args, **kwargs)
+
+    return wrapper
+
+
+def staff_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        user = current_user()
+
+        if not user:
+            flash("Kirjaudu ensin sisään.", "warning")
+            return redirect(url_for("login"))
+
+        if user["role"] not in ["admin", "manager"]:
+            flash("Sinulla ei ole oikeutta tähän näkymään.", "danger")
+            return redirect(url_for("index"))
+
+        return view_func(*args, **kwargs)
+
     return wrapper
 
 
@@ -290,11 +325,12 @@ def approved_contractor_required(view_func):
     @wraps(view_func)
     def wrapper(*args, **kwargs):
         user = current_user()
+
         if not user:
             flash("Kirjaudu ensin sisään.", "warning")
             return redirect(url_for("login"))
 
-        if user["role"] == "admin":
+        if user["role"] in ["admin", "manager"]:
             return view_func(*args, **kwargs)
 
         if user["role"] == "contractor" and user["contractor_status"] == "approved":
@@ -302,6 +338,7 @@ def approved_contractor_required(view_func):
 
         flash("Tilisi odottaa vielä hyväksyntää.", "warning")
         return redirect(url_for("pending"))
+
     return wrapper
 
 
@@ -315,7 +352,7 @@ def index():
     user = current_user()
 
     if user:
-        if user["role"] == "admin":
+        if user["role"] in ["admin", "manager"]:
             return redirect(url_for("admin_dashboard"))
 
         if user["contractor_status"] == "approved":
@@ -409,7 +446,7 @@ def login():
         session["user_id"] = user["id"]
         flash("Kirjautuminen onnistui.", "success")
 
-        if user["role"] == "admin":
+        if user["role"] in ["admin", "manager"]:
             return redirect(url_for("admin_dashboard"))
 
         if user["contractor_status"] == "approved":
@@ -432,7 +469,7 @@ def logout():
 def pending():
     user = current_user()
 
-    if user["role"] == "admin":
+    if user["role"] in ["admin", "manager"]:
         return redirect(url_for("admin_dashboard"))
 
     if user["contractor_status"] == "approved":
@@ -448,9 +485,9 @@ def download_section_file(file_id):
     conn = get_db()
 
     file_row = conn.execute("""
-        SELECT sf.*
-        FROM section_files sf
-        WHERE sf.id = ?
+        SELECT *
+        FROM section_files
+        WHERE id = ?
     """, (file_id,)).fetchone()
 
     conn.close()
@@ -474,9 +511,9 @@ def download_bid_attachment(bid_id):
     conn = get_db()
 
     bid = conn.execute("""
-        SELECT b.*
-        FROM bids b
-        WHERE b.id = ?
+        SELECT *
+        FROM bids
+        WHERE id = ?
     """, (bid_id,)).fetchone()
 
     conn.close()
@@ -485,7 +522,7 @@ def download_bid_attachment(bid_id):
         flash("Tarjousliitettä ei löytynyt.", "danger")
         return redirect(url_for("index"))
 
-    if user["role"] != "admin" and bid["contractor_id"] != user["id"]:
+    if user["role"] not in ["admin", "manager"] and bid["contractor_id"] != user["id"]:
         flash("Sinulla ei ole oikeutta tähän tiedostoon.", "danger")
         return redirect(url_for("index"))
 
@@ -499,7 +536,7 @@ def download_bid_attachment(bid_id):
 
 @app.route("/admin")
 @login_required
-@admin_required
+@staff_required
 def admin_dashboard():
     conn = get_db()
 
@@ -537,18 +574,80 @@ def admin_dashboard():
         pending_contractors=pending_contractors,
     )
 
+@app.route("/admin/managers/new", methods=["GET", "POST"])
+@login_required
+@admin_required
+def new_manager():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+
+        if not name or not email or not password:
+            flash("Täytä kaikki pakolliset kentät.", "danger")
+            return redirect(url_for("new_manager"))
+
+        conn = get_db()
+
+        existing = conn.execute(
+            "SELECT id FROM users WHERE email = ?",
+            (email,)
+        ).fetchone()
+
+        if existing:
+            conn.close()
+            flash("Tällä sähköpostilla on jo käyttäjä.", "danger")
+            return redirect(url_for("new_manager"))
+
+        conn.execute("""
+            INSERT INTO users (
+                name,
+                email,
+                password_hash,
+                role,
+                contractor_status,
+                company_name,
+                phone,
+                business_id,
+                contractor_litteras,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            name,
+            email,
+            generate_password_hash(password),
+            "manager",
+            "approved",
+            "Sakela",
+            "",
+            "",
+            "",
+            now_str(),
+        ))
+
+        conn.commit()
+        conn.close()
+
+        flash("Työnjohtaja lisätty.", "success")
+        return redirect(url_for("admin_dashboard"))
+
+    return render_template("manager_form.html")
+
 
 @app.route("/admin/contractors")
 @login_required
-@admin_required
+@staff_required
 def admin_contractors():
     conn = get_db()
+
     contractors = conn.execute("""
         SELECT *
         FROM users
         WHERE role = 'contractor'
         ORDER BY created_at DESC
     """).fetchall()
+
     conn.close()
 
     return render_template("admin_contractors.html", contractors=contractors)
@@ -556,14 +655,16 @@ def admin_contractors():
 
 @app.route("/admin/contractors/<int:user_id>/approve", methods=["POST"])
 @login_required
-@admin_required
+@staff_required
 def approve_contractor(user_id):
     conn = get_db()
+
     conn.execute("""
         UPDATE users
         SET contractor_status = 'approved'
         WHERE id = ? AND role = 'contractor'
     """, (user_id,))
+
     conn.commit()
     conn.close()
 
@@ -573,14 +674,16 @@ def approve_contractor(user_id):
 
 @app.route("/admin/contractors/<int:user_id>/reject", methods=["POST"])
 @login_required
-@admin_required
+@staff_required
 def reject_contractor(user_id):
     conn = get_db()
+
     conn.execute("""
         UPDATE users
         SET contractor_status = 'rejected'
         WHERE id = ? AND role = 'contractor'
     """, (user_id,))
+
     conn.commit()
     conn.close()
 
@@ -590,7 +693,7 @@ def reject_contractor(user_id):
 
 @app.route("/admin/projects")
 @login_required
-@admin_required
+@staff_required
 def admin_projects():
     search = request.args.get("search", "").strip()
 
@@ -615,7 +718,7 @@ def admin_projects():
         """, (
             f"%{search}%",
             f"%{search}%",
-            f"%{search}%"
+            f"%{search}%",
         )).fetchall()
     else:
         projects = conn.execute("""
@@ -639,9 +742,10 @@ def admin_projects():
         search=search,
     )
 
+
 @app.route("/admin/projects/new", methods=["GET", "POST"])
 @login_required
-@admin_required
+@staff_required
 def new_project():
     if request.method == "POST":
         title = request.form.get("title", "").strip()
@@ -656,12 +760,28 @@ def new_project():
             return redirect(url_for("new_project"))
 
         conn = get_db()
+
         conn.execute("""
             INSERT INTO projects (
-                title, location, description, deadline, status, visibility, created_at
+                title,
+                location,
+                description,
+                deadline,
+                status,
+                visibility,
+                created_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (title, location, description, deadline, status, visibility, now_str()))
+        """, (
+            title,
+            location,
+            description,
+            deadline,
+            status,
+            visibility,
+            now_str(),
+        ))
+
         conn.commit()
         conn.close()
 
@@ -673,7 +793,7 @@ def new_project():
 
 @app.route("/admin/projects/<int:project_id>/edit", methods=["GET", "POST"])
 @login_required
-@admin_required
+@staff_required
 def edit_project(project_id):
     conn = get_db()
 
@@ -702,9 +822,23 @@ def edit_project(project_id):
 
         conn.execute("""
             UPDATE projects
-            SET title = ?, location = ?, description = ?, deadline = ?, status = ?, visibility = ?
+            SET
+                title = ?,
+                location = ?,
+                description = ?,
+                deadline = ?,
+                status = ?,
+                visibility = ?
             WHERE id = ?
-        """, (title, location, description, deadline, status, visibility, project_id))
+        """, (
+            title,
+            location,
+            description,
+            deadline,
+            status,
+            visibility,
+            project_id,
+        ))
 
         conn.commit()
         conn.close()
@@ -713,6 +847,7 @@ def edit_project(project_id):
         return redirect(url_for("admin_project_detail", project_id=project_id))
 
     conn.close()
+
     return render_template("project_form.html", project=project)
 
 
@@ -760,6 +895,7 @@ def delete_project(project_id):
         conn.execute("DELETE FROM bids WHERE section_id = ?", (section_id,))
         conn.execute("DELETE FROM project_sections WHERE id = ?", (section_id,))
 
+    conn.execute("DELETE FROM project_invites WHERE project_id = ?", (project_id,))
     conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
 
     conn.commit()
@@ -768,9 +904,10 @@ def delete_project(project_id):
     flash("Projekti poistettu.", "success")
     return redirect(url_for("admin_projects"))
 
+
 @app.route("/admin/projects/<int:project_id>")
 @login_required
-@admin_required
+@staff_required
 def admin_project_detail(project_id):
     conn = get_db()
 
@@ -808,7 +945,7 @@ def admin_project_detail(project_id):
 
 @app.route("/admin/projects/<int:project_id>/sections/new", methods=["GET", "POST"])
 @login_required
-@admin_required
+@staff_required
 def new_section(project_id):
     conn = get_db()
 
@@ -824,7 +961,7 @@ def new_section(project_id):
 
     if request.method == "POST":
         title = request.form.get("title", "").strip()
-        Littera = request.form.get("Littera", "").strip()
+        littera = request.form.get("Littera", "").strip()
         description = request.form.get("description", "").strip()
         deadline = request.form.get("deadline", "").strip()
         status = request.form.get("status", "open")
@@ -836,15 +973,20 @@ def new_section(project_id):
 
         conn.execute("""
             INSERT INTO project_sections (
-                project_id, title, description, Littera,
-                deadline, status, created_at
+                project_id,
+                title,
+                description,
+                Littera,
+                deadline,
+                status,
+                created_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             project_id,
             title,
             description,
-            Littera,
+            littera,
             deadline,
             status,
             now_str(),
@@ -857,12 +999,13 @@ def new_section(project_id):
         return redirect(url_for("admin_project_detail", project_id=project_id))
 
     conn.close()
+
     return render_template("section_form.html", project=project, section=None)
 
 
 @app.route("/admin/sections/<int:section_id>/edit", methods=["GET", "POST"])
 @login_required
-@admin_required
+@staff_required
 def edit_section(section_id):
     conn = get_db()
 
@@ -887,7 +1030,7 @@ def edit_section(section_id):
 
     if request.method == "POST":
         title = request.form.get("title", "").strip()
-        Littera = request.form.get("Littera", "").strip()
+        littera = request.form.get("Littera", "").strip()
         description = request.form.get("description", "").strip()
         deadline = request.form.get("deadline", "").strip()
         status = request.form.get("status", "open")
@@ -899,12 +1042,17 @@ def edit_section(section_id):
 
         conn.execute("""
             UPDATE project_sections
-            SET title = ?, description = ?, Littera = ?, deadline = ?, status = ?
+            SET
+                title = ?,
+                description = ?,
+                Littera = ?,
+                deadline = ?,
+                status = ?
             WHERE id = ?
         """, (
             title,
             description,
-            Littera,
+            littera,
             deadline,
             status,
             section_id,
@@ -917,6 +1065,7 @@ def edit_section(section_id):
         return redirect(url_for("admin_section_detail", section_id=section_id))
 
     conn.close()
+
     return render_template("section_form.html", project=project, section=section)
 
 
@@ -954,7 +1103,10 @@ def delete_section(section_id):
 
     project_id = section["project_id"]
 
+    conn.execute("DELETE FROM section_files WHERE section_id = ?", (section_id,))
+    conn.execute("DELETE FROM bids WHERE section_id = ?", (section_id,))
     conn.execute("DELETE FROM project_sections WHERE id = ?", (section_id,))
+
     conn.commit()
     conn.close()
 
@@ -964,7 +1116,7 @@ def delete_section(section_id):
 
 @app.route("/admin/sections/<int:section_id>")
 @login_required
-@admin_required
+@staff_required
 def admin_section_detail(section_id):
     conn = get_db()
 
@@ -1019,9 +1171,10 @@ def admin_section_detail(section_id):
         bids=bids,
     )
 
+
 @app.route("/admin/sections/<int:section_id>/files/upload", methods=["POST"])
 @login_required
-@admin_required
+@staff_required
 def upload_section_file(section_id):
     note = request.form.get("note", "").strip()
     uploaded_file = request.files.get("file")
@@ -1054,8 +1207,13 @@ def upload_section_file(section_id):
 
     conn.execute("""
         INSERT INTO section_files (
-            section_id, uploaded_by, original_filename,
-            stored_filename, file_type, note, created_at
+            section_id,
+            uploaded_by,
+            original_filename,
+            stored_filename,
+            file_type,
+            note,
+            created_at
         )
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
@@ -1077,7 +1235,7 @@ def upload_section_file(section_id):
 
 @app.route("/admin/files/<int:file_id>/delete", methods=["POST"])
 @login_required
-@admin_required
+@staff_required
 def delete_section_file(file_id):
     conn = get_db()
 
@@ -1096,6 +1254,7 @@ def delete_section_file(file_id):
     safe_remove_file(file_row["stored_filename"])
 
     conn.execute("DELETE FROM section_files WHERE id = ?", (file_id,))
+
     conn.commit()
     conn.close()
 
@@ -1105,10 +1264,9 @@ def delete_section_file(file_id):
 
 @app.route("/admin/bids/<int:bid_id>/status", methods=["POST"])
 @login_required
-@admin_required
+@staff_required
 def update_bid_status(bid_id):
     new_status = request.form.get("status", "submitted")
-
     allowed_statuses = {"submitted", "reviewing", "accepted", "rejected"}
 
     if new_status not in allowed_statuses:
@@ -1138,9 +1296,10 @@ def update_bid_status(bid_id):
     flash("Tarjouksen status päivitetty.", "success")
     return redirect(url_for("admin_section_detail", section_id=bid["section_id"]))
 
+
 @app.route("/admin/projects/<int:project_id>/invite", methods=["POST"])
 @login_required
-@admin_required
+@staff_required
 def invite_contractors_to_project(project_id):
     littera = request.form.get("littera", "").strip()
     message = request.form.get("message", "").strip()
@@ -1211,6 +1370,14 @@ def invite_contractors_to_project(project_id):
 
         email_subject = f"Kutsu projektiin: {project['title']}"
 
+        extra_message = ""
+        if message:
+            extra_message = f"""
+
+Työnjohdon viesti:
+{message}
+"""
+
         email_body = f"""Hei {contractor['name']},
 
 Sinut on kutsuttu Sakela Urakkaportaalin projektiin:
@@ -1222,8 +1389,7 @@ Sijainti:
 
 Rakennusaika:
 {project['deadline'] or '-'}
-
-{message if message else ''}
+{extra_message}
 
 Avaa projekti tästä:
 {project_link}
@@ -1249,9 +1415,11 @@ Sakela Urakkaportaali
     )
 
     return redirect(url_for("admin_project_detail", project_id=project_id))
+
+
 @app.route("/admin/bids")
 @login_required
-@admin_required
+@staff_required
 def admin_bids():
     conn = get_db()
 
@@ -1311,6 +1479,7 @@ def admin_bids():
         grouped=grouped,
     )
 
+
 @app.route("/contractor")
 @login_required
 @approved_contractor_required
@@ -1318,27 +1487,27 @@ def contractor_dashboard():
     conn = get_db()
 
     projects = conn.execute("""
-    SELECT
-        p.*,
-        COUNT(DISTINCT ps.id) AS section_count,
-        COUNT(DISTINCT b.id) AS bid_count,
-        MAX(b.created_at) AS latest_bid_at
-    FROM projects p
-    LEFT JOIN project_sections ps ON ps.project_id = p.id
-    LEFT JOIN bids b ON b.section_id = ps.id
-    LEFT JOIN project_invites pi
-        ON pi.project_id = p.id
-        AND pi.contractor_id = ?
-    WHERE p.status = 'open'
-    AND (
-        COALESCE(p.visibility, 'public') = 'public'
-        OR pi.id IS NOT NULL
-    )
-    GROUP BY p.id
-    ORDER BY p.created_at DESC
-    LIMIT 5
-""", (session["user_id"],)).fetchall()
-    
+        SELECT
+            p.*,
+            COUNT(DISTINCT ps.id) AS section_count,
+            COUNT(DISTINCT b.id) AS bid_count,
+            MAX(b.created_at) AS latest_bid_at
+        FROM projects p
+        LEFT JOIN project_sections ps ON ps.project_id = p.id
+        LEFT JOIN bids b ON b.section_id = ps.id
+        LEFT JOIN project_invites pi
+            ON pi.project_id = p.id
+            AND pi.contractor_id = ?
+        WHERE p.status = 'open'
+        AND (
+            COALESCE(p.visibility, 'public') = 'public'
+            OR pi.id IS NOT NULL
+        )
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
+        LIMIT 5
+    """, (session["user_id"],)).fetchall()
+
     my_bids = conn.execute("""
         SELECT
             b.*,
@@ -1360,6 +1529,7 @@ def contractor_dashboard():
         my_bids=my_bids,
     )
 
+
 @app.route("/projects")
 @login_required
 @approved_contractor_required
@@ -1370,6 +1540,7 @@ def contractor_projects():
     conn = get_db()
 
     status_filter = ""
+
     if not show_all:
         status_filter = "AND p.status = 'open'"
 
@@ -1396,22 +1567,6 @@ def contractor_projects():
         GROUP BY p.id
         ORDER BY p.created_at DESC
     """, (user_id,)).fetchall()
-
-    conn.close()
-
-    return render_template(
-        "contractor_projects.html",
-        projects=projects,
-        show_all=show_all,
-    )
-
-    conn.close()
-
-    return render_template(
-        "contractor_projects.html",
-        projects=projects,
-        show_all=show_all,
-    )
 
     conn.close()
 
@@ -1491,10 +1646,17 @@ def contractor_section_detail(section_id):
             p.location AS project_location
         FROM project_sections ps
         JOIN projects p ON p.id = ps.project_id
+        LEFT JOIN project_invites pi
+            ON pi.project_id = p.id
+            AND pi.contractor_id = ?
         WHERE ps.id = ?
         AND ps.status = 'open'
         AND p.status = 'open'
-    """, (section_id,)).fetchone()
+        AND (
+            COALESCE(p.visibility, 'public') = 'public'
+            OR pi.id IS NOT NULL
+        )
+    """, (session["user_id"], section_id)).fetchone()
 
     if not section:
         conn.close()

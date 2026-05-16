@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}Lisää työnjohtaja{% endblock %}
+
+{% block content %}
+
+<div class="form-wrap">
+    <div class="card">
+        <h1 style="font-size:44px; margin-bottom:14px;">
+            Lisää työnjohtaja
+        </h1>
+
+        <p class="muted" style="line-height:1.8; margin-bottom:30px;">
+            Työnjohtaja voi hallita projekteja, litteroita, tiedostoja,
+            urakoitsijoita ja tarjouksia, mutta ei poistaa kokonaisia kohteita.
+        </p>
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Nimi *</label>
+                <input type="text" name="name" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>Sähköposti *</label>
+                <input type="email" name="email" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label>Salasana *</label>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+
+            <button type="submit" class="btn">
+                Lisää työnjohtaja
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
