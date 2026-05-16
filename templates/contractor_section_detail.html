@@ -97,59 +97,65 @@
         Piirustukset ja suunnitelmat
     </h2>
 
-    {% if files %}
-        <div class="grid">
-            {% for file in files %}
-                <div
-                    style="
-                        padding:20px;
-                        border-radius:18px;
-                        background:rgba(255,255,255,0.04);
-                        border:1px solid rgba(255,255,255,0.06);
-                    "
-                >
+{% if files %}
+    <div
+        style="
+            display:flex;
+            flex-direction:column;
+            gap:10px;
+        "
+    >
+        {% for file in files %}
+            <div
+                style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    gap:18px;
+                    padding:12px 14px;
+                    border-radius:14px;
+                    background:rgba(255,255,255,0.035);
+                    border:1px solid rgba(255,255,255,0.06);
+                    flex-wrap:wrap;
+                "
+            >
+                <div style="min-width:220px; flex:1;">
                     <div
                         style="
-                            display:flex;
-                            justify-content:space-between;
-                            gap:16px;
-                            flex-wrap:wrap;
-                            align-items:flex-start;
+                            font-size:14px;
+                            font-weight:700;
+                            margin-bottom:4px;
+                            word-break:break-word;
                         "
                     >
-                        <div>
-                            <h3 style="margin-bottom:10px;">
-                                📎 {{ file.original_filename }}
-                            </h3>
+                        📄 {{ file.original_filename }}
+                    </div>
 
-                            <div
-                                style="
-                                    color:rgba(255,255,255,0.65);
-                                    line-height:1.8;
-                                "
-                            >
-                                <div>Tyyppi: {{ file.file_type }}</div>
-                                <div>Lisätty: {{ file.created_at }}</div>
+                    <div
+                        style="
+                            color:rgba(255,255,255,0.62);
+                            font-size:12px;
+                            line-height:1.5;
+                        "
+                    >
+                        {{ file.file_type }} · {{ file.created_at }}
 
-                                {% if file.note %}
-                                    <div style="margin-top:8px;">
-                                        {{ file.note }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <a
-                            href="{{ url_for('download_section_file', file_id=file.id) }}"
-                            class="btn btn-small"
-                        >
-                            Lataa
-                        </a>
+                        {% if file.note %}
+                            <br>{{ file.note }}
+                        {% endif %}
                     </div>
                 </div>
-            {% endfor %}
-        </div>
-    {% else %}
+
+                <a
+                    href="{{ url_for('download_section_file', file_id=file.id) }}"
+                    class="btn btn-small"
+                >
+                    Lataa
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
         <div class="empty-state">
             Tähän urakkaosaan ei ole vielä lisätty piirustuksia tai suunnitelmia.
         </div>

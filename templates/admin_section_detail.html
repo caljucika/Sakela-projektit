@@ -143,40 +143,87 @@
             Piirustukset ja suunnitelmat
         </h2>
 
-        {% if files %}
-            <div class="compact-list">
-                {% for file in files %}
-                    <div class="compact-card" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.07);">
-                        <strong>📎 {{ file.original_filename }}</strong>
-
-                        <div class="muted" style="font-size:13px; line-height:1.7; margin-top:6px;">
-                            {{ file.file_type }} · {{ file.created_at }}
-                            {% if file.note %}
-                                <br>{{ file.note }}
-                            {% endif %}
-                        </div>
-
-                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
-                            <a href="{{ url_for('download_section_file', file_id=file.id) }}" class="btn btn-small">
-                                Lataa
-                            </a>
-
-                            <form method="POST" action="{{ url_for('delete_section_file', file_id=file.id) }}" onsubmit="return confirm('Haluatko varmasti poistaa tämän tiedoston?');">
-                                <button type="submit" class="btn btn-small btn-danger">
-                                    Poista
-                                </button>
-                            </form>
-                        </div>
+{% if files %}
+    <div
+        style="
+            display:flex;
+            flex-direction:column;
+            gap:10px;
+        "
+    >
+        {% for file in files %}
+            <div
+                style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    gap:18px;
+                    padding:12px 14px;
+                    border-radius:14px;
+                    background:rgba(255,255,255,0.035);
+                    border:1px solid rgba(255,255,255,0.06);
+                    flex-wrap:wrap;
+                "
+            >
+                <div style="min-width:220px; flex:1;">
+                    <div
+                        style="
+                            font-size:14px;
+                            font-weight:700;
+                            margin-bottom:4px;
+                            word-break:break-word;
+                        "
+                    >
+                        📄 {{ file.original_filename }}
                     </div>
-                {% endfor %}
+
+                    <div
+                        class="muted"
+                        style="
+                            font-size:12px;
+                            line-height:1.5;
+                        "
+                    >
+                        {{ file.file_type }} · {{ file.created_at }}
+
+                        {% if file.note %}
+                            <br>{{ file.note }}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div
+                    style="
+                        display:flex;
+                        gap:8px;
+                        align-items:center;
+                    "
+                >
+                    <a
+                        href="{{ url_for('download_section_file', file_id=file.id) }}"
+                        class="btn btn-small"
+                    >
+                        Lataa
+                    </a>
+
+                    <form
+                        method="POST"
+                        action="{{ url_for('delete_section_file', file_id=file.id) }}"
+                        onsubmit="return confirm('Haluatko varmasti poistaa tämän tiedoston?');"
+                        style="display:inline;"
+                    >
+                        <button type="submit" class="btn btn-small btn-danger">
+                            Poista
+                        </button>
+                    </form>
+                </div>
             </div>
-        {% else %}
-            <div class="empty-state">
-                Ei tiedostoja vielä.
-            </div>
-        {% endif %}
+        {% endfor %}
     </div>
-</div>
+{% else %}
+
+        
+            
 
 <div style="display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:28px;">
     <div>
