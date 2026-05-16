@@ -1153,7 +1153,8 @@ def admin_section_detail(section_id):
             u.name AS contractor_name,
             u.company_name,
             u.email,
-            u.phone
+            u.phone,
+            u.business_id
         FROM bids b
         JOIN users u ON u.id = b.contractor_id
         WHERE b.section_id = ?
@@ -1432,6 +1433,7 @@ def admin_bids():
             u.company_name,
             u.email,
             u.phone,
+            u.business_id,
             ps.id AS section_id,
             ps.title AS section_title,
             ps.Littera,
@@ -1755,6 +1757,7 @@ def contractor_section_detail(section_id):
                     section_id,
                     contractor_id,
                     price,
+                    matches_request,
                     message,
                     attachment_original_filename,
                     attachment_stored_filename,
@@ -1766,6 +1769,7 @@ def contractor_section_detail(section_id):
                 section_id,
                 session["user_id"],
                 price,
+                matches_request,
                 message,
                 attachment_original_filename,
                 attachment_stored_filename,
