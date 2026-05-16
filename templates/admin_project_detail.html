@@ -171,6 +171,7 @@
     </div>
 {% endif %}
 
+{% if current_user.role == "admin" %}
 <div class="card danger-card" style="margin-top:36px;">
     <h2 style="font-size:24px; margin-bottom:12px;">
         Vain admin
@@ -191,5 +192,6 @@
         </button>
     </form>
 </div>
+{% endif %}
 
 {% endblock %}
