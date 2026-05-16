@@ -436,6 +436,7 @@
     </div>
 {% endif %}
 
+{% if current_user.role == "admin" %}
 <div class="card danger-card" style="margin-top:50px;">
     <h2 style="font-size:28px; margin-bottom:16px;">
         Vaaravyöhyke
@@ -456,5 +457,6 @@
         </button>
     </form>
 </div>
+{% endif %}
 
 {% endblock %}
