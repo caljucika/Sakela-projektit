@@ -1,6 +1,9 @@
 import os
 import sqlite3
 import smtplib
+import zipfile
+import tempfile
+import boto3
 from datetime import datetime
 from functools import wraps
 from email.message import EmailMessage
@@ -105,6 +108,27 @@ def send_email(to_email, subject, body, reply_to=None):
         server.login(smtp_user, smtp_password)
         server.send_message(msg)
 
+    return True
+
+def upload_backup_to_r2(local_file_path, object_name):
+    r2_endpoint = os.environ.get("R2_ENDPOINT")
+    r2_bucket = os.environ.get("R2_BUCKET")
+    r2_access_key = os.environ.get("R2_ACCESS_KEY_ID")
+    r2_secret_key = os.environ.get("R2_SECRET_ACCESS_KEY")
+
+    if not r2_endpoint or not r2_bucket or not r2_access_key or not r2_secret_key:
+        print("R2 BACKUP SKIPPED: missing settings")
+        return False
+
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=r2_endpoint,
+        aws_access_key_id=r2_access_key,
+        aws_secret_access_key=r2_secret_key,
+        region_name="auto",
+    )
+
+    s3.upload_file(local_file_path, r2_bucket, object_name)
     return True
 
 
