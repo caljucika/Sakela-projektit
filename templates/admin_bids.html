@@ -101,58 +101,77 @@
 
                                                 <td>
                                                     <strong>{{ bid.company_name }}</strong>
-                                                    <div class="muted" style="font-size:12px;">
+
+                                                    <div class="muted" style="font-size:12px; margin-top:4px;">
                                                         Y-tunnus: {{ bid.business_id or "-" }}
-                                                </div>
-                                            </td>
+                                                    </div>
+                                                </td>
 
-                                            <td style="font-size:13px;">
-                                                {{ bid.email }}<br>
-                                                {{ bid.phone or "-" }}
-                                            </td>
+                                                <td style="font-size:13px; line-height:1.6;">
+                                                    {{ bid.email }}<br>
 
-                                            <td>
-                                                {% if bid.matches_request == "no" %}
-                                                    <span style="color:#fca5a5; font-weight:800;">Ei</span>
-                                                {% else %}
-                                                    <span style="color:#86efac; font-weight:800;">Kyllä</span>
-                                                {% endif %}
-                                            </td>
+                                                    {% if bid.phone %}
+                                                        {{ bid.phone }}
+                                                    {% else %}
+                                                        -
+                                                    {% endif %}
+                                                </td>
 
-                                            <td>
-                                                <strong style="color:#f59e0b; font-size:16px;">
-                                                    {{ bid.price }}
-                                                </strong>
-                                            </td>
+                                                <td>
+                                                    {% if bid.matches_request == "no" %}
+                                                        <span style="color:#fca5a5; font-weight:800;">
+                                                            Ei
+                                                        </span>
+                                                    {% else %}
+                                                        <span style="color:#86efac; font-weight:800;">
+                                                            Kyllä
+                                                        </span>
+                                                    {% endif %}
+                                                </td>
 
-                                            <td>
-                                                {% if bid.message or bid.attachment_stored_filename %}
-                                                    <details>
-                                                        <summary style="cursor:pointer; font-weight:800;">
-                                                            Tiedot
-                                                        </summary>
+                                                <td>
+                                                    <strong style="color:#f59e0b; font-size:16px;">
+                                                        {{ bid.price }}
+                                                    </strong>
+                                                </td>
 
-                                                        {% if bid.message %}
-                                                            <p class="muted" style="white-space:pre-line; margin-top:10px; font-size:13px; line-height:1.6;">
-                                                                {{ bid.message }}
-                                                            </p>
-                                                        {% endif %}
+                                                <td>
+                                                    {% if bid.message or bid.attachment_stored_filename %}
+                                                        <details>
+                                                            <summary style="cursor:pointer; font-weight:700;">
+                                                                Avaa
+                                                            </summary>
 
-                                                        {% if bid.attachment_stored_filename %}
-                                                            <a
-                                                                href="{{ url_for('download_bid_attachment', bid_id=bid.id) }}"
-                                                                class="btn btn-small"
-                                                                style="margin-top:10px;"
-                                                            >
-                                                                Lataa liite
-                                                            </a>
-                                                        {% endif %}
-                                                    </details>
-                                                {% else %}
-                                                    <span class="muted">-</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
+                                                            {% if bid.message %}
+                                                                <div
+                                                                    class="muted"
+                                                                    style="
+                                                                        margin-top:10px;
+                                                                        white-space:pre-line;
+                                                                        font-size:13px;
+                                                                        line-height:1.7;
+                                                                    "
+                                                                >
+                                                                    {{ bid.message }}
+                                                                </div>
+                                                            {% endif %}
+
+                                                            {% if bid.attachment_stored_filename %}
+                                                                <div style="margin-top:12px;">
+                                                                    <a
+                                                                        href="{{ url_for('download_bid_attachment', bid_id=bid.id) }}"
+                                                                        class="btn btn-small"
+                                                                    >
+                                                                        Liite
+                                                                    </a>
+                                                                </div>
+                                                            {% endif %}
+                                                        </details>
+                                                    {% else %}
+                                                        <span class="muted">-</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
