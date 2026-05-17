@@ -1827,7 +1827,7 @@ def contractor_section_detail(section_id):
                     status,
                     created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)
             """, (
                 section_id,
                 session["user_id"],
