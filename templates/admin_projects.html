@@ -41,6 +41,22 @@
                     Tyhjennä
                 </a>
             {% endif %}
+
+            {% if show_all %}
+                <a
+                    href="{{ url_for('admin_projects', search=search) }}"
+                    class="btn btn-small"
+                >
+                    Näytä vain avoimet
+                </a>
+            {% else %}
+                <a
+                    href="{{ url_for('admin_projects', all=1, search=search) }}"
+                    class="btn btn-small"
+                >
+                    Näytä kaikki kohteet
+                </a>
+            {% endif %}
         </div>
     </form>
 </div>
