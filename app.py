@@ -1340,12 +1340,14 @@ def update_bid_status(bid_id):
     return redirect(url_for("admin_section_detail", section_id=bid["section_id"]))
 
 
+
 @app.route("/admin/projects/<int:project_id>/invite", methods=["POST"])
 @login_required
 @staff_required
 def invite_contractors_to_project(project_id):
     littera = request.form.get("littera", "").strip()
     message = request.form.get("message", "").strip()
+    section_id = request.form.get("section_id")
 
     conn = get_db()
 
@@ -1358,6 +1360,21 @@ def invite_contractors_to_project(project_id):
         conn.close()
         flash("Projektia ei löytynyt.", "danger")
         return redirect(url_for("admin_projects"))
+
+    section = None
+
+    if section_id:
+        section = conn.execute("""
+            SELECT *
+            FROM project_sections
+            WHERE id = ?
+            AND project_id = ?
+        """, (section_id, project_id)).fetchone()
+
+        if not section:
+            conn.close()
+            flash("Urakkaosaa ei löytynyt.", "danger")
+            return redirect(url_for("admin_project_detail", project_id=project_id))
 
     if littera:
         contractors = conn.execute("""
@@ -1394,10 +1411,25 @@ def invite_contractors_to_project(project_id):
             ))
 
             invited_count += 1
-            invited_contractors.append(contractor)
 
         except sqlite3.IntegrityError:
-            invited_contractors.append(contractor)
+            pass
+
+        if section:
+            conn.execute("""
+                INSERT OR IGNORE INTO section_invites (
+                    section_id,
+                    contractor_id,
+                    invited_at
+                )
+                VALUES (?, ?, ?)
+            """, (
+                section["id"],
+                contractor["id"],
+                now_str(),
+            ))
+
+        invited_contractors.append(contractor)
 
     conn.commit()
     conn.close()
@@ -1406,25 +1438,43 @@ def invite_contractors_to_project(project_id):
     email_failed_count = 0
 
     for contractor in invited_contractors:
-        project_link = request.host_url.rstrip("/") + url_for(
-            "contractor_project_detail",
-            project_id=project_id
-        )
+        if section:
+            project_link = request.host_url.rstrip("/") + url_for(
+                "contractor_section_detail",
+                section_id=section["id"]
+            )
+        else:
+            project_link = request.host_url.rstrip("/") + url_for(
+                "contractor_project_detail",
+                project_id=project_id
+            )
 
-        email_subject = f"Kutsu projektiin: {project['title']}"
+        email_subject = f"Kutsu tarjouspyyntöön: {project['title']}"
+
+        section_text = ""
+
+        if section:
+            section_text = f"""
+Urakkaosa:
+{section['title']}
+
+Littera:
+{section['Littera'] or '-'}
+"""
 
         extra_message = ""
+
         if message:
             extra_message = f"""
-
 Työnjohdon viesti:
 {message}
 """
 
         email_body = f"""Hei {contractor['name']},
 
-Sinut on kutsuttu Sakela Urakkaportaalin projektiin:
+Sinut on kutsuttu Sakela Urakkaportaalin tarjouspyyntöön.
 
+Projekti:
 {project['title']}
 
 Sijainti:
@@ -1432,9 +1482,10 @@ Sijainti:
 
 Rakennusaika:
 {project['deadline'] or '-'}
+{section_text}
 {extra_message}
 
-Avaa projekti tästä:
+Avaa tarjouspyyntö tästä:
 {project_link}
 
 Terveisin,
@@ -1456,6 +1507,9 @@ Sakela Urakkaportaali
         f"Epäonnistui: {email_failed_count}.",
         "success"
     )
+
+    if section:
+        return redirect(url_for("admin_section_detail", section_id=section["id"]))
 
     return redirect(url_for("admin_project_detail", project_id=project_id))
 
