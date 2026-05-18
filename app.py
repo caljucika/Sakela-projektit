@@ -720,9 +720,6 @@ def reject_contractor(user_id):
 @app.route("/admin/projects")
 @login_required
 @staff_required
-@app.route("/admin/projects")
-@login_required
-@staff_required
 def admin_projects():
     search = request.args.get("search", "").strip()
     show_all = request.args.get("all")
