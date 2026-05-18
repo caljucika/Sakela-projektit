@@ -714,7 +714,12 @@ def admin_contractors():
         SELECT *
         FROM users
         WHERE role = 'contractor'
-        ORDER BY created_at DESC
+        ORDER BY
+            CASE
+                WHEN company_name IS NULL OR company_name = ''
+                THEN name
+                ELSE company_name
+            END COLLATE NOCASE ASC
     """).fetchall()
 
     conn.close()
