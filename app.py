@@ -228,6 +228,16 @@ def init_db():
         )
     """)
 
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS section_invites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            section_id INTEGER NOT NULL,
+            contractor_id INTEGER NOT NULL,
+            invited_at TEXT NOT NULL,
+            UNIQUE(section_id, contractor_id)
+        )
+    """)
+
     if not column_exists(conn, "bids", "attachment_original_filename"):
         cur.execute("ALTER TABLE bids ADD COLUMN attachment_original_filename TEXT")
 
