@@ -1688,22 +1688,27 @@ def contractor_projects():
             COUNT(DISTINCT b.id) AS bid_count,
             MAX(b.created_at) AS latest_bid_at
         FROM projects p
-        LEFT JOIN project_sections ps ON ps.project_id = p.id
-        LEFT JOIN bids b ON b.section_id = ps.id
-        WHERE
-            (
-                COALESCE(p.visibility, 'public') = 'public'
-                OR EXISTS (
-                    SELECT 1
-                    FROM project_invites pi
-                    WHERE pi.project_id = p.id
-                    AND pi.contractor_id = ?
-                )
-            )
-            {status_filter}
+
+        JOIN project_sections ps
+            ON ps.project_id = p.id
+
+        JOIN section_invites si
+            ON si.section_id = ps.id
+            AND si.contractor_id = ?
+
+        LEFT JOIN bids b
+            ON b.section_id = ps.id
+            AND b.contractor_id = ?
+
+        WHERE ps.status = 'open'
+        {status_filter}
+
         GROUP BY p.id
         ORDER BY p.created_at DESC
-    """, (user_id,)).fetchall()
+    """, (
+        user_id,
+        user_id,
+    )).fetchall()
 
     conn.close()
 
@@ -1790,9 +1795,15 @@ def contractor_section_detail(section_id):
             p.location AS project_location
         FROM project_sections ps
         JOIN projects p ON p.id = ps.project_id
+
+        JOIN section_invites si
+            ON si.section_id = ps.id
+            AND si.contractor_id = ?
+
         LEFT JOIN project_invites pi
             ON pi.project_id = p.id
             AND pi.contractor_id = ?
+
         WHERE ps.id = ?
         AND ps.status = 'open'
         AND p.status = 'open'
@@ -1800,7 +1811,11 @@ def contractor_section_detail(section_id):
             COALESCE(p.visibility, 'public') = 'public'
             OR pi.id IS NOT NULL
         )
-    """, (session["user_id"], section_id)).fetchone()
+    """, (
+        session["user_id"],
+        session["user_id"],
+        section_id,
+    )).fetchone()
 
     if not section:
         conn.close()
