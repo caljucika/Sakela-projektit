@@ -39,7 +39,7 @@
                 "
             >
                 {% if section %}
-                    Päivitä urakkaosan tiedot, deadline tai status.
+                    Päivitä urakkaosan tiedot, littera, deadline tai status.
                 {% else %}
                     Lisää projektiin uusi urakkaosa,
                     johon urakoitsijat voivat jättää tarjouksia.
@@ -66,13 +66,22 @@
             <div class="form-group">
                 <label>Littera</label>
 
-                <input
-                    type="text"
-                    name="Littera"
-                    class="form-control"
-                    placeholder="Esim. Sähkötyöt"
-                    value="{{ section.Littera if section else '' }}"
-                >
+                <select name="Littera" class="form-control">
+                    <option value="">
+                        Valitse littera
+                    </option>
+
+                    {% for value, label in littera_options %}
+                        <option
+                            value="{{ value }}"
+                            {% if section and section.Littera == value %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
 
             <div class="form-group">

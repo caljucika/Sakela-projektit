@@ -51,43 +51,35 @@
             </div>
 
             <div class="form-group">
-                <label>Litterat / kategoriat</label>
+                <label>Litterat / urakkatyypit</label>
 
-                <div class="grid grid-2" style="gap:12px; margin-top:12px;">
-                    {% set litteras = [
-                        "Maanrakennus",
-                        "Sähkö",
-                        "LVI",
-                        "Betoni",
-                        "Purku",
-                        "Maalaus",
-                        "Kalusteet",
-                        "Pihatyöt",
-                        "Katto",
-                        "Julkisivu",
-                        "Sisätyöt",
-                        "Muut työt"
-                    ] %}
+                <p class="muted" style="font-size:13px; line-height:1.6; margin-top:8px;">
+                    Valitse ne litterat, joihin yrityksesi haluaa saada tarjouspyyntöjä.
+                </p>
 
-                    {% for littera in litteras %}
+                <div class="grid grid-2" style="gap:10px; margin-top:14px;">
+                    {% for value, label in littera_options %}
                         <label
                             style="
                                 display:flex;
                                 align-items:center;
                                 gap:10px;
-                                padding:12px 14px;
-                                border-radius:14px;
+                                padding:10px 12px;
+                                border-radius:12px;
                                 background:rgba(255,255,255,0.05);
                                 border:1px solid rgba(255,255,255,0.08);
                                 cursor:pointer;
+                                font-size:13px;
+                                line-height:1.4;
                             "
                         >
                             <input
                                 type="checkbox"
                                 name="contractor_litteras"
-                                value="{{ littera }}"
+                                value="{{ value }}"
                             >
-                            <span>{{ littera }}</span>
+
+                            <span>{{ label }}</span>
                         </label>
                     {% endfor %}
                 </div>

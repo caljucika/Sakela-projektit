@@ -21,6 +21,39 @@ from flask import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
+LITTERA_OPTIONS = [
+    ("1", "1 = Maa- ja pohjarakennus"),
+    ("2", "2 = Rakennustekniset työt"),
+    ("21", "21 = Betonityöt"),
+    ("22", "22 = Teräsrakenteet"),
+    ("23", "23 = Väestönsuojarakenteet"),
+    ("3", "3 = Vesikattorakenteet"),
+    ("31", "31 = Bitumikermityöt"),
+    ("4", "4 = Täydentävät rakenteet"),
+    ("41", "41 = Ovet ja ikkunat"),
+    ("42", "42 = Lukitus"),
+    ("43", "43 = Listoitus"),
+    ("44", "44 = Kaiteet ja käsijohteet"),
+    ("45", "45 = Väliseinät"),
+    ("46", "46 = Listoitus"),
+    ("5", "5 = Pintarakenteet"),
+    ("51", "51 = Laatoitus"),
+    ("52", "52 = Mattotyöt"),
+    ("53", "53 = Massalattiat"),
+    ("54", "54 = Alakatot"),
+    ("55", "55 = Tasoitus- ja maalaus"),
+    ("6", "6 = Kalusteet, varusteet ja laitteet"),
+    ("61", "61 = Kiintokalusteet"),
+    ("62", "62 = Varusteet"),
+    ("63", "63 = Laitoskeittiö"),
+    ("67", "67 = Väestönsuojanvarusteet"),
+    ("7", "7 = Konetekniset työt"),
+    ("71", "71 = LVI"),
+    ("72", "72 = Automaatio"),
+    ("73", "73 = Sähkö"),
+    ("74", "74 = Hissi"),
+]
+
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-later")
@@ -459,7 +492,7 @@ def register():
         flash("Rekisteröityminen vastaanotettu. Tili odottaa hyväksyntää.", "success")
         return redirect(url_for("login"))
 
-    return render_template("register.html")
+    return render_template("register.html", littera_options=LITTERA_OPTIONS)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -1042,7 +1075,7 @@ def new_section(project_id):
 
     conn.close()
 
-    return render_template("section_form.html", project=project, section=None)
+    return render_template("section_form.html", project=project, section=None, littera_options=LITTERA_OPTIONS)
 
 
 @app.route("/admin/sections/<int:section_id>/edit", methods=["GET", "POST"])
@@ -1108,7 +1141,7 @@ def edit_section(section_id):
 
     conn.close()
 
-    return render_template("section_form.html", project=project, section=section)
+    return render_template("section_form.html", project=project, section=section, littera_options=LITTERA_OPTIONS)
 
 
 @app.route("/admin/sections/<int:section_id>/delete", methods=["POST"])
