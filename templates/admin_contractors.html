@@ -68,16 +68,16 @@
 
         <div class="table-wrap">
 
-            <table>
+            <table style="font-size:13px;">
 
                 <thead>
                     <tr>
-                        <th>Yritys</th>
-                        <th>Yhteyshenkilö</th>
-                        <th>Sähköposti</th>
-                        <th>Puhelin</th>
-                        <th>Status</th>
-                        <th>Toiminnot</th>
+                        <th style="padding:10px 12px; font-size:12px;"></th>Yritys</th>
+                        <th style="padding:10px 12px; font-size:12px;">Yhteyshenkilö</th>
+                        <th style="padding:10px 12px; font-size:12px;">Sähköposti</th>
+                        <th style="padding:10px 12px; font-size:12px;">Puhelin</th>
+                        <th style="padding:10px 12px; font-size:12px;">Status</th>
+                        <th style="padding:10px 12px; font-size:12px;">Toiminnot</th>
                     </tr>
                 </thead>
 
@@ -85,27 +85,27 @@
 
                     {% for contractor in contractors %}
 
-                        <tr>
+                        <tr style="height:58px;">
 
-                            <td>
+                            <td style="padding:10px 12px;">
                                 <strong>
                                     {{ contractor.company_name }}
                                 </strong>
                             </td>
 
-                            <td>
+                            <td style="padding:10px 12px;">
                                 {{ contractor.name }}
                             </td>
 
-                            <td>
+                            <td style="padding:10px 12px;">
                                 {{ contractor.email }}
                             </td>
 
-                            <td>
+                            <td style="padding:10px 12px;">
                                 {{ contractor.phone or "-" }}
                             </td>
 
-                            <td>
+                            <td style="padding:10px 12px;">
 
                                 <span
                                     class="
@@ -118,7 +118,7 @@
 
                             </td>
 
-                            <td>
+                            <td style="padding:10px 12px;">
 
                                 <div
                                     style="
@@ -137,6 +137,7 @@
                                             <button
                                                 type="submit"
                                                 class="btn btn-small"
+                                                style="padding:8px 12px; font-size:12px;"
                                             >
                                                 Hyväksy
                                             </button>
