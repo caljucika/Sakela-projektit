@@ -1755,10 +1755,17 @@ def contractor_project_detail(project_id):
                 WHERE sf.section_id = ps.id
             ) AS file_count
         FROM project_sections ps
+        JOIN section_invites si
+            ON si.section_id = ps.id
+            AND si.contractor_id = ?
         WHERE ps.project_id = ?
         AND ps.status = 'open'
         ORDER BY ps.created_at DESC
-    """, (session["user_id"], project_id)).fetchall()
+    """, (
+        session["user_id"],
+        session["user_id"],
+        project_id,
+    )).fetchall()
 
     conn.close()
 
