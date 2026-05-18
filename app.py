@@ -1629,21 +1629,30 @@ def contractor_dashboard():
             COUNT(DISTINCT ps.id) AS section_count,
             COUNT(DISTINCT b.id) AS bid_count,
             MAX(b.created_at) AS latest_bid_at
+
         FROM projects p
-        LEFT JOIN project_sections ps ON ps.project_id = p.id
-        LEFT JOIN bids b ON b.section_id = ps.id
-        LEFT JOIN project_invites pi
-            ON pi.project_id = p.id
-            AND pi.contractor_id = ?
+
+        JOIN project_sections ps
+            ON ps.project_id = p.id
+
+        JOIN section_invites si
+            ON si.section_id = ps.id
+            AND si.contractor_id = ?
+
+        LEFT JOIN bids b
+            ON b.section_id = ps.id
+            AND b.contractor_id = ?
+
         WHERE p.status = 'open'
-        AND (
-            COALESCE(p.visibility, 'public') = 'public'
-            OR pi.id IS NOT NULL
-        )
+        AND ps.status = 'open'
+
         GROUP BY p.id
         ORDER BY p.created_at DESC
         LIMIT 5
-    """, (session["user_id"],)).fetchall()
+    """, (
+        session["user_id"],
+        session["user_id"],
+    )).fetchall()
 
     my_bids = conn.execute("""
         SELECT
