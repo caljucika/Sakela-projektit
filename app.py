@@ -1238,6 +1238,18 @@ def admin_section_detail(section_id):
         key=lambda bid: parse_price_value(bid["price"])
     )
 
+    approved_contractors = conn.execute("""
+        SELECT
+            id,
+            name,
+            company_name,
+            email
+        FROM users
+        WHERE role = 'contractor'
+        AND contractor_status = 'approved'
+        ORDER BY company_name ASC, name ASC
+    """).fetchall()
+
     conn.close()
 
     return render_template(
@@ -1246,6 +1258,7 @@ def admin_section_detail(section_id):
         files=files,
         bids=bids,
         littera_options=LITTERA_OPTIONS,
+        approved_contractors=approved_contractors,
     )
 
 
@@ -1546,6 +1559,128 @@ Sakela Urakkaportaali
         return redirect(url_for("admin_section_detail", section_id=section["id"]))
 
     return redirect(url_for("admin_project_detail", project_id=project_id))
+
+@app.route("/admin/sections/<int:section_id>/invite-single", methods=["POST"])
+@login_required
+@staff_required
+def invite_single_contractor_to_section(section_id):
+    contractor_id = request.form.get("contractor_id")
+    message = request.form.get("message", "").strip()
+
+    if not contractor_id:
+        flash("Valitse urakoitsija.", "danger")
+        return redirect(url_for("admin_section_detail", section_id=section_id))
+
+    conn = get_db()
+
+    section = conn.execute("""
+        SELECT
+            ps.*,
+            p.id AS project_id,
+            p.title AS project_title,
+            p.location AS project_location,
+            p.deadline AS project_deadline
+        FROM project_sections ps
+        JOIN projects p ON p.id = ps.project_id
+        WHERE ps.id = ?
+    """, (section_id,)).fetchone()
+
+    contractor = conn.execute("""
+        SELECT *
+        FROM users
+        WHERE id = ?
+        AND role = 'contractor'
+        AND contractor_status = 'approved'
+    """, (contractor_id,)).fetchone()
+
+    if not section or not contractor:
+        conn.close()
+        flash("Urakkaosaa tai urakoitsijaa ei löytynyt.", "danger")
+        return redirect(url_for("admin_section_detail", section_id=section_id))
+
+    now = now_str()
+
+    conn.execute("""
+        INSERT OR IGNORE INTO project_invites (
+            project_id,
+            contractor_id,
+            invited_at
+        )
+        VALUES (?, ?, ?)
+    """, (
+        section["project_id"],
+        contractor["id"],
+        now,
+    ))
+
+    conn.execute("""
+        INSERT OR IGNORE INTO section_invites (
+            section_id,
+            contractor_id,
+            invited_at
+        )
+        VALUES (?, ?, ?)
+    """, (
+        section["id"],
+        contractor["id"],
+        now,
+    ))
+
+    conn.commit()
+    conn.close()
+
+    project_link = request.host_url.rstrip("/") + url_for(
+        "contractor_section_detail",
+        section_id=section["id"]
+    )
+
+    extra_message = ""
+
+    if message:
+        extra_message = f"""
+Työnjohdon viesti:
+{message}
+"""
+
+    email_subject = f"Kutsu tarjouspyyntöön: {section['project_title']}"
+
+    email_body = f"""Hei {contractor['name']},
+
+Sinut on kutsuttu Sakela Urakkaportaalin tarjouspyyntöön.
+
+Projekti:
+{section['project_title']}
+
+Sijainti:
+{section['project_location'] or '-'}
+
+Rakennusaika:
+{section['project_deadline'] or '-'}
+
+Urakkaosa:
+{section['title']}
+
+Littera:
+{section['Littera'] or '-'}
+{extra_message}
+
+Avaa tarjouspyyntö tästä:
+{project_link}
+
+Terveisin,
+Sakela Urakkaportaali
+"""
+
+    try:
+        if send_email(contractor["email"], email_subject, email_body):
+            flash("Urakoitsija kutsuttu ja sähköposti lähetetty.", "success")
+        else:
+            flash("Kutsu tallennettu, mutta sähköpostin lähetys epäonnistui.", "warning")
+    except Exception as e:
+        print("EMAIL ERROR:", e)
+        flash("Kutsu tallennettu, mutta sähköpostin lähetys epäonnistui.", "warning")
+
+    return redirect(url_for("admin_section_detail", section_id=section_id))
 
 
 @app.route("/admin/backup/r2", methods=["POST"])

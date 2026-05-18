@@ -80,20 +80,12 @@
     <form
         method="POST"
         action="{{ url_for('invite_contractors_to_project', project_id=section.project_id) }}"
+        style="margin-bottom:22px;"
     >
-        <input
-            type="hidden"
-            name="section_id"
-            value="{{ section.id }}"
-        >
+        <input type="hidden" name="section_id" value="{{ section.id }}">
 
         <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-
-            <select
-                name="littera"
-                class="form-control"
-                style="max-width:360px;"
-            >
+            <select name="littera" class="form-control" style="max-width:360px;">
                 <option value="">
                     Kaikki hyväksytyt urakoitsijat
                 </option>
@@ -119,11 +111,62 @@
             >
 
             <button type="submit" class="btn">
-                Kutsu urakoitsijat
+                Kutsu ryhmä
             </button>
-
         </div>
     </form>
+
+    <div
+        style="
+            padding-top:20px;
+            border-top:1px solid rgba(255,255,255,0.08);
+        "
+    >
+        <h3 style="font-size:20px; margin-bottom:10px;">
+            Kutsu yksittäinen urakoitsija
+        </h3>
+
+        <p class="muted" style="line-height:1.7; margin-bottom:16px;">
+            Käytä tätä, jos haluat lisätä yhden urakoitsijan tähän tarjouspyyntöön ilman,
+            että kutsut koko litteraryhmän uudelleen.
+        </p>
+
+        <form
+            method="POST"
+            action="{{ url_for('invite_single_contractor_to_section', section_id=section.id) }}"
+        >
+            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                <select
+                    name="contractor_id"
+                    class="form-control"
+                    style="max-width:420px;"
+                    required
+                >
+                    <option value="">
+                        Valitse hyväksytty urakoitsija
+                    </option>
+
+                    {% for contractor in approved_contractors %}
+                        <option value="{{ contractor.id }}">
+                            {{ contractor.company_name }} — {{ contractor.email }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <input
+                    type="text"
+                    name="message"
+                    class="form-control"
+                    placeholder="Lisäviesti urakoitsijalle..."
+                    style="flex:1; min-width:260px;"
+                >
+
+                <button type="submit" class="btn">
+                    Kutsu valittu
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <div class="grid grid-2" style="margin-bottom:50px;">
