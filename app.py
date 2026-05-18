@@ -721,6 +721,54 @@ def admin_contractors():
 
     return render_template("admin_contractors.html", contractors=contractors)
 
+@app.route("/admin/contractors/invite", methods=["POST"])
+@login_required
+@staff_required
+def invite_new_contractor():
+    email = request.form.get("email", "").strip().lower()
+    message = request.form.get("message", "").strip()
+
+    if not email:
+        flash("Sähköposti on pakollinen.", "danger")
+        return redirect(url_for("admin_contractors"))
+
+    register_link = request.host_url.rstrip("/") + url_for("register")
+
+    extra_message = ""
+
+    if message:
+        extra_message = f"""
+Työnjohdon viesti:
+{message}
+"""
+
+    email_subject = "Kutsu Sakela Urakkaportaaliin"
+
+    email_body = f"""Hei,
+
+Sinut on kutsuttu rekisteröitymään Sakela Urakkaportaaliin.
+
+Portaalissa voit vastaanottaa tarjouspyyntöjä, ladata piirustuksia ja jättää tarjouksia sähköisesti.
+{extra_message}
+
+Rekisteröidy tästä:
+{register_link}
+
+Terveisin,
+Sakela Urakkaportaali
+"""
+
+    try:
+        if send_email(email, email_subject, email_body):
+            flash("Kutsu lähetetty urakoitsijalle.", "success")
+        else:
+            flash("Kutsun lähetys epäonnistui.", "danger")
+    except Exception as e:
+        print("INVITE NEW CONTRACTOR EMAIL ERROR:", e)
+        flash("Kutsun lähetys epäonnistui.", "danger")
+
+    return redirect(url_for("admin_contractors"))
+
 
 @app.route("/admin/contractors/<int:user_id>/approve", methods=["POST"])
 @login_required

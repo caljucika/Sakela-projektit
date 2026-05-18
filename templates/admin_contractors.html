@@ -23,6 +23,45 @@
 
 </div>
 
+<div class="card" style="margin-bottom:28px;">
+    <h2 style="font-size:28px; letter-spacing:-0.04em; margin-bottom:10px;">
+        Kutsu uusi urakoitsija
+    </h2>
+
+    <p class="muted" style="line-height:1.8; margin-bottom:18px;">
+        Lähetä urakoitsijalle rekisteröitymislinkki sähköpostilla.
+        Kun urakoitsija rekisteröityy, työnjohto hyväksyy hänet normaalisti.
+    </p>
+
+    <form
+        method="POST"
+        action="{{ url_for('invite_new_contractor') }}"
+    >
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+            <input
+                type="email"
+                name="email"
+                class="form-control"
+                placeholder="urakoitsija@yritys.fi"
+                required
+                style="flex:1; min-width:260px;"
+            >
+
+            <input
+                type="text"
+                name="message"
+                class="form-control"
+                placeholder="Lisäviesti urakoitsijalle..."
+                style="flex:1; min-width:260px;"
+            >
+
+            <button type="submit" class="btn">
+                Lähetä kutsu
+            </button>
+        </div>
+    </form>
+</div>
+
 <div class="card">
 
     {% if contractors %}
