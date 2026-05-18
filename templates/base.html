@@ -103,8 +103,18 @@
         © Sakela Urakkaportaali
     </div>
 
-    <div>
-        Projektit · Piirustukset · Tarjoukset
+    <div style="display:flex; gap:14px; flex-wrap:wrap;">
+        <a href="{{ url_for('support') }}" style="color:rgba(255,255,255,0.55); text-decoration:none;">
+            Tuki
+        </a>
+
+        <a href="{{ url_for('privacy') }}" style="color:rgba(255,255,255,0.55); text-decoration:none;">
+        Tietosuoja
+        </a>
+
+        <a href="{{ url_for('terms') }}" style="color:rgba(255,255,255,0.55); text-decoration:none;">
+            Käyttöehdot
+        </a>
     </div>
 </footer>
 

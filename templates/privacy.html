@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Tietosuojaseloste{% endblock %}
+
+{% block content %}
+
+<div class="form-wrap">
+    <div class="card">
+        <h1 style="font-size:52px; margin-bottom:18px;">
+            Tietosuojaseloste
+        </h1>
+
+        <p class="muted" style="line-height:1.9; margin-bottom:28px;">
+            Sakela Urakkaportaalissa käsitellään käyttäjien ja yritysten tietoja
+            tarjouspyyntöjen, urakkaosien, tiedostojen ja tarjousten hallintaa varten.
+        </p>
+
+        <div class="compact-list">
+            <div class="card compact-card">
+                <h2>Käsiteltävät tiedot</h2>
+                <p class="muted" style="line-height:1.8;">
+                    Nimi, sähköposti, puhelinnumero, yrityksen nimi, y-tunnus,
+                    käyttäjärooli, tarjouspyynnöt, tarjoukset, liitteet ja palveluun
+                    ladatut tiedostot.
+                </p>
+            </div>
+
+            <div class="card compact-card">
+                <h2>Tietojen käyttötarkoitus</h2>
+                <p class="muted" style="line-height:1.8;">
+                    Tietoja käytetään urakkakilpailutusten hallintaan,
+                    käyttäjien tunnistamiseen, sähköpostikutsujen lähettämiseen
+                    ja palvelun tekniseen ylläpitoon.
+                </p>
+            </div>
+
+            <div class="card compact-card">
+                <h2>Säilytys ja varmuuskopiot</h2>
+                <p class="muted" style="line-height:1.8;">
+                    Palvelun tietoja voidaan varmuuskopioida teknisen turvallisuuden
+                    ja palautusmahdollisuuden varmistamiseksi.
+                </p>
+            </div>
+
+            <div class="card compact-card">
+                <h2>Yhteydenotot</h2>
+                <p class="muted" style="line-height:1.8;">
+                    Tietosuojaan liittyvissä kysymyksissä ota yhteyttä palvelun tukeen.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -525,6 +525,20 @@ def login():
 
     return render_template("login.html")
 
+@app.route("/tuki")
+def support():
+    return render_template("support.html")
+
+
+@app.route("/tietosuoja")
+def privacy():
+    return render_template("privacy.html")
+
+
+@app.route("/kayttoehdot")
+def terms():
+    return render_template("terms.html")
+
 
 @app.route("/logout")
 def logout():
