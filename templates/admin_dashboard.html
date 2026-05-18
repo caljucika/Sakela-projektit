@@ -206,7 +206,7 @@
         {% endif %}
     </div>
 
-    {% if current_user.role == "admin" %}
+    {% if current_user.role == "admin" or current_user.role == "manager" %}
         <div class="card">
             <div
                 style="
