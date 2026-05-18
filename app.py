@@ -1245,6 +1245,7 @@ def admin_section_detail(section_id):
         section=section,
         files=files,
         bids=bids,
+        littera_options=LITTERA_OPTIONS,
     )
 
 

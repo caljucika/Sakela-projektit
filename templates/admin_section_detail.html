@@ -92,11 +92,22 @@
             <select
                 name="littera"
                 class="form-control"
-                style="max-width:320px;"
+                style="max-width:360px;"
             >
-                <option value="{{ section.Littera }}">
-                    {{ section.Littera or "Kaikki urakoitsijat" }}
+                <option value="">
+                    Kaikki hyväksytyt urakoitsijat
                 </option>
+
+                {% for value, label in littera_options %}
+                    <option
+                        value="{{ value }}"
+                        {% if section.Littera == value %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ label }}
+                    </option>
+                {% endfor %}
             </select>
 
             <input
