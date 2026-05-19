@@ -1329,20 +1329,20 @@ def admin_section_detail(section_id):
         approved_contractors=approved_contractors,
     )
 
-
 @app.route("/admin/sections/<int:section_id>/files/upload", methods=["POST"])
 @login_required
 @staff_required
 def upload_section_file(section_id):
     note = request.form.get("note", "").strip()
-    uploaded_file = request.files.get("file")
+    uploaded_files = request.files.getlist("files")
 
-    if not uploaded_file or uploaded_file.filename == "":
-        flash("Valitse ladattava tiedosto.", "danger")
-        return redirect(url_for("admin_section_detail", section_id=section_id))
+    uploaded_files = [
+        file for file in uploaded_files
+        if file and file.filename
+    ]
 
-    if not allowed_file(uploaded_file.filename):
-        flash("Tiedostomuoto ei ole sallittu.", "danger")
+    if not uploaded_files:
+        flash("Valitse vähintään yksi ladattava tiedosto.", "danger")
         return redirect(url_for("admin_section_detail", section_id=section_id))
 
     conn = get_db()
@@ -1357,37 +1357,53 @@ def upload_section_file(section_id):
         flash("Urakkaosaa ei löytynyt.", "danger")
         return redirect(url_for("admin_projects"))
 
-    original_filename = uploaded_file.filename
-    stored_filename = make_stored_filename(original_filename)
-    file_type = original_filename.rsplit(".", 1)[1].lower()
+    saved_count = 0
+    skipped_count = 0
 
-    uploaded_file.save(os.path.join(UPLOAD_FOLDER, stored_filename))
+    for uploaded_file in uploaded_files:
+        if not allowed_file(uploaded_file.filename):
+            skipped_count += 1
+            continue
 
-    conn.execute("""
-        INSERT INTO section_files (
+        original_filename = uploaded_file.filename
+        stored_filename = make_stored_filename(original_filename)
+        file_type = original_filename.rsplit(".", 1)[1].lower()
+
+        uploaded_file.save(os.path.join(UPLOAD_FOLDER, stored_filename))
+
+        conn.execute("""
+            INSERT INTO section_files (
+                section_id,
+                uploaded_by,
+                original_filename,
+                stored_filename,
+                file_type,
+                note,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
             section_id,
-            uploaded_by,
+            session["user_id"],
             original_filename,
             stored_filename,
             file_type,
             note,
-            created_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (
-        section_id,
-        session["user_id"],
-        original_filename,
-        stored_filename,
-        file_type,
-        note,
-        now_str(),
-    ))
+            now_str(),
+        ))
+
+        saved_count += 1
 
     conn.commit()
     conn.close()
 
-    flash("Tiedosto lisätty urakkaosaan.", "success")
+    if saved_count and skipped_count:
+        flash(f"{saved_count} tiedostoa lisätty. {skipped_count} tiedostoa ohitettiin virheellisen tiedostomuodon vuoksi.", "warning")
+    elif saved_count:
+        flash(f"{saved_count} tiedostoa lisätty urakkaosaan.", "success")
+    else:
+        flash("Yhtään tiedostoa ei lisätty. Tarkista tiedostomuodot.", "danger")
+
     return redirect(url_for("admin_section_detail", section_id=section_id))
 
 
