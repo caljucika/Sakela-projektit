@@ -169,21 +169,51 @@
     </div>
 </div>
 
-<div class="form-group">
-    <label>Tiedostot *</label>
+<div class="grid grid-2" style="margin-bottom:50px;">
+    <div class="card">
+        <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:12px;">
+            Lisää piirustukset ja suunnitelmat
+        </h2>
 
-    <input
-        type="file"
-        name="files"
-        class="form-control"
-        multiple
-        required
-    >
+        <form
+            method="POST"
+            action="{{ url_for('upload_section_file', section_id=section.id) }}"
+            enctype="multipart/form-data"
+        >
 
-    <div class="muted" style="margin-top:8px; font-size:13px;">
-        Voit valita useita tiedostoja kerralla.
+            <div class="form-group">
+                <label>Tiedostot *</label>
+
+                <input
+                    type="file"
+                    name="files"
+                    class="form-control"
+                    multiple
+                    required
+                >
+
+                <div class="muted" style="margin-top:8px; font-size:13px;">
+                    Voit valita useita tiedostoja kerralla.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Lisätieto</label>
+
+                <input
+                    type="text"
+                    name="note"
+                    class="form-control"
+                    placeholder="Esim. Arkkitehtipiirustus, revisio 1"
+                >
+            </div>
+
+            <button type="submit" class="btn">
+                Lisää tiedostot
+            </button>
+
+        </form>
     </div>
-</div>
 
     <div class="card">
         <h2 style="font-size:32px; letter-spacing:-0.04em; margin-bottom:12px;">
