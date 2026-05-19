@@ -410,6 +410,30 @@ def approved_contractor_required(view_func):
 
     return wrapper
 
+@app.route("/admin/reset-test-data", methods=["POST"])
+@login_required
+@admin_required
+def reset_test_data():
+    conn = get_db()
+
+    conn.execute("DELETE FROM bids")
+    conn.execute("DELETE FROM section_invites")
+    conn.execute("DELETE FROM project_invites")
+    conn.execute("DELETE FROM section_files")
+    conn.execute("DELETE FROM project_sections")
+    conn.execute("DELETE FROM projects")
+    conn.execute("DELETE FROM users WHERE role != 'admin'")
+
+    conn.commit()
+    conn.close()
+
+    if os.path.exists(UPLOAD_FOLDER):
+        for filename in os.listdir(UPLOAD_FOLDER):
+            safe_remove_file(filename)
+
+    flash("Testidata poistettu. Admin-käyttäjät säilytettiin.", "success")
+    return redirect(url_for("admin_dashboard"))
+
 
 @app.context_processor
 def inject_user():
